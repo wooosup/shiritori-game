@@ -50,6 +50,7 @@ export default function GamePage() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null);
     const isGameStarted = useRef(false);
 
     // --- 초기화 ---
@@ -77,28 +78,40 @@ export default function GamePage() {
         return () => clearInterval(timer);
     }, [isGameOver, gameId]);
 
-    // --- 스크롤 자동 이동 ---
+    // --- 스크롤 자동 이동 (메시지 추가될 때) ---
     useEffect(() => {
         setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }, 100);
     }, [history, loading]);
 
+    // ✅ [최적화] 키보드 대응 로직 (높이 조절 + 스크롤 이동 통합)
     useEffect(() => {
         const handleResize = () => {
+            // 1. 화면 높이 강제 조정 (Visual Viewport API)
+            if (viewportRef.current && window.visualViewport) {
+                viewportRef.current.style.height = `${window.visualViewport.height}px`;
+                viewportRef.current.style.minHeight = `${window.visualViewport.height}px`; // 안전장치
+            }
+
+            // 2. 높이가 변했으니 스크롤을 맨 아래로 내리기
             if (chatContainerRef.current) {
                 setTimeout(() => {
                     chatContainerRef.current?.scrollTo({
                         top: chatContainerRef.current.scrollHeight,
                         behavior: 'smooth'
                     });
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
                 }, 100);
             }
         };
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', handleResize);
+            // 초기 로딩 시 한 번 실행
+            handleResize();
         } else {
+            // 구형 브라우저 폴백
             window.addEventListener('resize', handleResize);
         }
 
@@ -147,9 +160,6 @@ export default function GamePage() {
         try {
             if (gameId) {
                 await apiClient.post(`/games/${gameId}/turn`, { gameId, word: 'TIME_OVER_SIGNAL' });
-                console.log("시간 초과 신호 전송 성공:", gameId);
-            } else {
-                console.error("gameId가 없어서 시간 초과 요청을 못 보냈습니다.");
             }
         } catch (e) {
             console.log("시간 초과 처리 중 오류 (무시됨)");
@@ -160,7 +170,6 @@ export default function GamePage() {
         if (gameId && !isGameOver) {
             try {
                 await apiClient.post(`/games/${gameId}/quit`);
-                console.log("게임 포기 요청 전송");
             } catch (e) {
                 console.error("포기 처리 중 에러(무시됨)", e);
             }
@@ -268,12 +277,10 @@ export default function GamePage() {
             const data: TurnResponse = res.data.data;
 
             // 3. 서버 응답 처리
-            // 내 메시지는 이미 추가했으므로 생략하고, 점수와 AI 메시지만 처리
             setScore(data.currentScore);
             setCombo(data.currentCombo);
 
             if (data.status === 'PLAYING') {
-                // AI 답변 추가
                 addMessage('AI', data.aiWord, data.aiReading, data.aiMeaning);
                 setTimeLeft(20);
             } else {
@@ -294,21 +301,22 @@ export default function GamePage() {
 
             const serverMsg = error.response?.data?.message || '오류가 발생했습니다.';
             setErrorMessage(serverMsg);
-            setInputWord(userInput); // 입력했던 단어 다시 채워주기
+            setInputWord(userInput);
         } finally {
-            setLoading(false); // 로딩 끝
+            setLoading(false);
         }
     };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50 font-sans">
-
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
                 .font-jp { font-family: 'Noto Sans JP', sans-serif; }
             `}</style>
 
-            <div className="w-full max-w-md h-[100dvh] bg-white shadow-2xl flex flex-col overflow-hidden relative border-x border-gray-200">
+            <div
+                ref={viewportRef}
+                className="w-full max-w-md h-[100dvh] bg-white shadow-2xl flex flex-col overflow-hidden relative border-x border-gray-200">
 
                 {/* 헤더 */}
                 <header className="flex-none flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md z-10 sticky top-0 border-b border-gray-50">
@@ -392,7 +400,6 @@ export default function GamePage() {
                         </div>
                     ))}
 
-                    {/* 🤖 3. AI 생각 중 표시 (Loading Bubble) */}
                     {loading && (
                         <div className="flex w-full justify-start">
                             <div className="flex flex-col max-w-[75%] items-start">
@@ -440,7 +447,6 @@ export default function GamePage() {
                                 : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg active:scale-95'}
                             `}
                         >
-                            {/* 로딩 중엔 버튼도 스피너로 변경 */}
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"/>
                             ) : (
