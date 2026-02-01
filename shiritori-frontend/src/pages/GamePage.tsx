@@ -48,9 +48,10 @@ export default function GamePage() {
     // 입력창 흔들림 효과
     const [shake, setShake] = useState(false);
 
+    // Refs
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const chatContainerRef = useRef<HTMLElement>(null);
-    const viewportRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null); // 전체 화면 컨테이너
+    const inputRef = useRef<HTMLInputElement>(null);  // 입력창 포커스용
     const isGameStarted = useRef(false);
 
     // --- 초기화 ---
@@ -58,6 +59,46 @@ export default function GamePage() {
         if (isGameStarted.current) return;
         isGameStarted.current = true;
         startGame();
+    }, []);
+
+    // --- 🚀 [핵심] 화면 높이 & 키보드 완벽 대응 로직 ---
+    useEffect(() => {
+        const handleResize = () => {
+            if (viewportRef.current && window.visualViewport) {
+                // 1. 현재 보이는 실제 높이(키보드 제외)를 가져옵니다.
+                const currentHeight = window.visualViewport.height;
+
+                // 2. 앱 전체 높이를 강제로 맞춥니다. (여백 제거의 핵심)
+                viewportRef.current.style.height = `${currentHeight}px`;
+                viewportRef.current.style.minHeight = `${currentHeight}px`;
+
+                // 3. 전체 웹페이지 스크롤을 막아서 위아래 흔들림(여백)을 방지합니다.
+                window.scrollTo(0, 0);
+
+                // 4. 채팅 스크롤을 맨 아래로 내려줍니다.
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+                }, 50); // 모션 없이 '탁' 붙게 하려면 auto, 약간 부드럽게는 smooth
+            }
+        };
+
+        // 초기 실행
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+            window.visualViewport.addEventListener('scroll', handleResize); // 스크롤 될 때도 강제 고정
+            handleResize();
+        } else {
+            window.addEventListener('resize', handleResize);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize);
+                window.visualViewport.removeEventListener('scroll', handleResize);
+            } else {
+                window.removeEventListener('resize', handleResize);
+            }
+        };
     }, []);
 
     // --- 타이머 ---
@@ -78,51 +119,11 @@ export default function GamePage() {
         return () => clearInterval(timer);
     }, [isGameOver, gameId]);
 
-    // --- 스크롤 자동 이동 (메시지 추가될 때) ---
+    // --- 메시지 추가 시 스크롤 이동 ---
     useEffect(() => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }, 100);
+        // 메시지가 추가되면 딜레이 없이 바로 이동
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, [history, loading]);
-
-    // ✅ [최적화] 키보드 대응 로직 (높이 조절 + 스크롤 이동 통합)
-    useEffect(() => {
-        const handleResize = () => {
-            // 1. 화면 높이 강제 조정 (Visual Viewport API)
-            if (viewportRef.current && window.visualViewport) {
-                viewportRef.current.style.height = `${window.visualViewport.height}px`;
-                viewportRef.current.style.minHeight = `${window.visualViewport.height}px`; // 안전장치
-            }
-
-            // 2. 높이가 변했으니 스크롤을 맨 아래로 내리기
-            if (chatContainerRef.current) {
-                setTimeout(() => {
-                    chatContainerRef.current?.scrollTo({
-                        top: chatContainerRef.current.scrollHeight,
-                        behavior: 'smooth'
-                    });
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                }, 100);
-            }
-        };
-
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', handleResize);
-            // 초기 로딩 시 한 번 실행
-            handleResize();
-        } else {
-            // 구형 브라우저 폴백
-            window.addEventListener('resize', handleResize);
-        }
-
-        return () => {
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener('resize', handleResize);
-            } else {
-                window.removeEventListener('resize', handleResize);
-            }
-        };
-    }, []);
 
     // --- 에러 메시지 2초 뒤 사라짐 ---
     useEffect(() => {
@@ -161,18 +162,13 @@ export default function GamePage() {
             if (gameId) {
                 await apiClient.post(`/games/${gameId}/turn`, { gameId, word: 'TIME_OVER_SIGNAL' });
             }
-        } catch (e) {
-            console.log("시간 초과 처리 중 오류 (무시됨)");
-        }
+        } catch (e) { console.log("시간 초과 처리 중 오류 (무시됨)"); }
     };
 
     const handleQuit = async () => {
         if (gameId && !isGameOver) {
-            try {
-                await apiClient.post(`/games/${gameId}/quit`);
-            } catch (e) {
-                console.error("포기 처리 중 에러(무시됨)", e);
-            }
+            try { await apiClient.post(`/games/${gameId}/quit`); }
+            catch (e) { console.error("포기 처리 중 에러(무시됨)", e); }
         }
         navigate('/');
     };
@@ -188,25 +184,14 @@ export default function GamePage() {
         if (errorMessage) setErrorMessage(null);
     };
 
-    // 모바일 키보드 대응 스크롤
-    const handleInputFocus = () => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }, 300);
-    };
-
-    // 유효성 검사
+    // 유효성 검사 (기존 로직 유지)
     const checkWordIsValid = (word: string): string | null => {
         if (history.length === 0) return '⏳ 게임 준비 중...';
-
         let cleanInput = word.trim().normalize("NFC");
-        cleanInput = cleanInput.replace(/[\u30a1-\u30f6]/g, (match) =>
-            String.fromCharCode(match.charCodeAt(0) - 0x60)
-        );
+        cleanInput = cleanInput.replace(/[\u30a1-\u30f6]/g, (match) => String.fromCharCode(match.charCodeAt(0) - 0x60));
 
         const isDuplicate = history.some((msg) => msg.word.normalize("NFC") === cleanInput);
         if (isDuplicate) return '이미 입력한 단어입니다.';
-
         const isKanaOnly = /^[ぁ-んァ-ンー]+$/.test(cleanInput);
         if (!isKanaOnly) return null;
 
@@ -216,7 +201,6 @@ export default function GamePage() {
             const lastChar = targetText.slice(-1);
             const prevChar = targetText.slice(-2, -1);
             const firstChar = cleanInput.charAt(0);
-
             let isValid = false;
             let expectedStart = "";
 
@@ -227,27 +211,16 @@ export default function GamePage() {
                 const bigKana = JapaneseUtils.toBigKana(lastChar);
                 const normBig = JapaneseUtils.normalizeForCheck(bigKana);
                 const normFirst = JapaneseUtils.normalizeForCheck(firstChar);
-
-                if (cleanInput.startsWith(combinedSound) ||
-                    cleanInput.startsWith(combinedSeion) ||
-                    normBig === normFirst) {
+                if (cleanInput.startsWith(combinedSound) || cleanInput.startsWith(combinedSeion) || normBig === normFirst) {
                     isValid = true;
-                } else {
-                    expectedStart = `${bigKana} 또는 ${combinedSeion}`;
-                }
+                } else { expectedStart = `${bigKana} 또는 ${combinedSeion}`; }
             } else {
                 const normLast = JapaneseUtils.normalizeForCheck(lastChar);
                 const normFirst = JapaneseUtils.normalizeForCheck(firstChar);
-                if (normLast === normFirst) {
-                    isValid = true;
-                } else {
-                    expectedStart = JapaneseUtils.toBigKana(JapaneseUtils.toSeion(lastChar));
-                }
+                if (normLast === normFirst) isValid = true;
+                else expectedStart = JapaneseUtils.toBigKana(JapaneseUtils.toSeion(lastChar));
             }
-
-            if (!isValid) {
-                return `'${expectedStart}'(으)로 시작해야 합니다.`;
-            }
+            if (!isValid) return `'${expectedStart}'(으)로 시작해야 합니다.`;
         }
         return null;
     };
@@ -259,65 +232,68 @@ export default function GamePage() {
 
         const userInput = inputWord.trim();
         const error = checkWordIsValid(userInput);
+        if (error) { setErrorMessage(error); return; }
 
-        if (error) {
-            setErrorMessage(error);
-            return;
-        }
-
-        // 1. 메시지 추가
         addMessage('USER', userInput, userInput);
         setInputWord('');
         setErrorMessage(null);
         setLoading(true);
 
+        // 메시지 입력 후 포커스 유지 (키보드 안 내려가게)
+        inputRef.current?.focus();
+
         try {
-            // 2. 서버 요청
             const res = await apiClient.post(`/games/${gameId}/turn`, { gameId, word: userInput });
             const data: TurnResponse = res.data.data;
-
-            // 3. 서버 응답 처리
             setScore(data.currentScore);
             setCombo(data.currentCombo);
-
             if (data.status === 'PLAYING') {
                 addMessage('AI', data.aiWord, data.aiReading, data.aiMeaning);
                 setTimeLeft(20);
             } else {
                 setIsGameOver(true);
-                setGameResult({
-                    type: data.status === 'WIN' ? 'WIN' : 'LOSE',
-                    msg: data.message
-                });
+                setGameResult({ type: data.status === 'WIN' ? 'WIN' : 'LOSE', msg: data.message });
+                // 게임 끝나면 키보드 내리기
+                inputRef.current?.blur();
             }
-
         } catch (error: any) {
             setHistory(prev => prev.slice(0, -1));
-
-            if (error.response?.status === 429) {
-                setErrorMessage("⛔ 너무 빨라요! 천천히 입력해주세요.");
-                return;
-            }
-
+            if (error.response?.status === 429) { setErrorMessage("⛔ 너무 빨라요! 천천히 입력해주세요."); return; }
             const serverMsg = error.response?.data?.message || '오류가 발생했습니다.';
             setErrorMessage(serverMsg);
             setInputWord(userInput);
-        } finally {
-            setLoading(false);
+        } finally { setLoading(false); }
+    };
+
+    // 채팅창 클릭 시 입력창으로 포커스 이동 (사용자 요청 반영)
+    const handleChatClick = () => {
+        if (!isGameOver) {
+            inputRef.current?.focus();
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-50 font-sans">
+        // ✅ [핵심] 배경을 고정하고 오버스크롤을 막습니다.
+        <div className="fixed inset-0 w-full h-full bg-slate-50 font-sans overflow-hidden touch-none">
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
                 .font-jp { font-family: 'Noto Sans JP', sans-serif; }
+                /* 흔들림 방지용 */
+                html, body { 
+                    position: fixed; 
+                    width: 100%; 
+                    height: 100%; 
+                    overflow: hidden; 
+                    overscroll-behavior: none;
+                }
             `}</style>
 
             <div
                 ref={viewportRef}
-                className="w-full max-w-md h-[100dvh] bg-white shadow-2xl flex flex-col overflow-hidden relative border-x border-gray-200">
-
+                // ✅ [핵심] fixed로 상단에 고정. 높이는 JS가 1px 단위로 제어함.
+                className="fixed top-0 left-0 w-full max-w-md mx-auto bg-white shadow-2xl flex flex-col relative border-x border-gray-200"
+                style={{ height: '100%' }} // 초기값 100%
+            >
                 {/* 헤더 */}
                 <header className="flex-none flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md z-10 sticky top-0 border-b border-gray-50">
                     <div>
@@ -363,13 +339,14 @@ export default function GamePage() {
 
                 {/* 채팅 영역 */}
                 <main
-                    ref={chatContainerRef}
-                    className="flex-1 px-5 py-6 overflow-y-auto bg-slate-50 space-y-6">
+                    // 채팅창 클릭 시 입력창 포커스 (키보드 올라오게)
+                    onClick={handleChatClick}
+                    className="flex-1 px-5 py-6 overflow-y-auto bg-slate-50 space-y-6"
+                    style={{ overscrollBehavior: 'contain' }} // 내부 스크롤만 허용
+                >
                     {history.map((msg, i) => (
                         <div key={i} className={`flex w-full ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}>
-
                             <div className={`flex flex-col max-w-[75%] ${msg.sender === 'USER' ? 'items-end' : 'items-start'}`}>
-
                                 <div className={`
                                     relative px-6 py-4 shadow-sm font-jp transition-all duration-300 hover:scale-[1.02]
                                     ${msg.sender === 'USER'
@@ -383,12 +360,10 @@ export default function GamePage() {
                                             {msg.reading}
                                         </div>
                                     )}
-
                                     <div className="text-xl font-black tracking-wider leading-none">
                                         {msg.word}
                                     </div>
                                 </div>
-
                                 {msg.meaning && (
                                     <span className={`text-[11px] font-bold text-gray-400 mt-2 px-2
                                         ${msg.sender === 'USER' ? 'text-right' : 'text-left'}
@@ -410,24 +385,21 @@ export default function GamePage() {
                                         <div className="w-2 h-2 bg-indigo-300 rounded-full animate-[bounce_1s_infinite_400ms]"></div>
                                     </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-indigo-300 mt-2 px-2">
-                                    생각하는 중...
-                                </span>
+                                <span className="text-[10px] font-bold text-indigo-300 mt-2 px-2">생각하는 중...</span>
                             </div>
                         </div>
                     )}
-
                     <div ref={messagesEndRef} />
                 </main>
 
-                {/* 입력창 */}
+                {/* 입력창 (항상 바닥에 고정됨) */}
                 <footer className="flex-none p-5 bg-white border-t border-gray-100 pb-[env(safe-area-inset-bottom)]">
                     <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={inputWord}
                             onChange={handleInputChange}
-                            onFocus={handleInputFocus}
                             disabled={isGameOver}
                             placeholder={isGameOver ? "게임이 종료되었습니다" : "단어를 입력하세요..."}
                             className={`
@@ -458,27 +430,25 @@ export default function GamePage() {
                     </form>
                 </footer>
 
-                {/* 결과 모달 */}
+                {/* 결과 모달 (생략: 기존과 동일) */}
                 {isGameOver && gameResult && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[4px] p-6">
+                        {/* ... 결과 모달 내용은 그대로 유지 ... */}
                         <div className="bg-white p-8 rounded-[32px] shadow-2xl text-center animate-bounceIn w-full max-w-sm">
                             <div className="text-6xl mb-4 drop-shadow-sm">{gameResult.type === 'WIN' ? '🎉' : '💀'}</div>
                             <h2 className="text-3xl font-black mb-3 text-slate-800 tracking-tight">{gameResult.type === 'WIN' ? 'YOU WIN!' : 'GAME OVER'}</h2>
                             <p className="text-gray-500 font-medium mb-8 bg-gray-50 py-2 rounded-lg">{gameResult.msg}</p>
-
                             <div className="bg-indigo-50 p-6 rounded-2xl mb-8 border border-indigo-100">
                                 <div className="text-xs text-indigo-400 font-extrabold tracking-widest mb-1">FINAL SCORE</div>
                                 <div className="text-4xl font-black text-indigo-600 tracking-tighter">{score.toLocaleString()}</div>
                             </div>
-
-                            <button onClick={() => navigate('/')} className="w-full py-4 bg-slate-900 text-white font-bold text-lg rounded-2xl hover:bg-slate-800 transition shadow-xl shadow-slate-200 active:scale-95">
-                                메인으로 돌아가기
-                            </button>
+                            <button onClick={() => navigate('/')} className="w-full py-4 bg-slate-900 text-white font-bold text-lg rounded-2xl hover:bg-slate-800 transition shadow-xl shadow-slate-200 active:scale-95">메인으로 돌아가기</button>
                         </div>
                     </div>
                 )}
             </div>
 
+            {/* 애니메이션 스타일 */}
             <style>{`
                 @keyframes shake {
                     0%, 100% { transform: translateX(0); }
@@ -487,17 +457,13 @@ export default function GamePage() {
                     60% { transform: translateX(-2px); }
                     80% { transform: translateX(2px); }
                 }
-                .animate-shake {
-                    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-                }
+                .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
                 @keyframes bounceIn {
                     0% { transform: scale(0.9); opacity: 0; }
                     60% { transform: scale(1.05); opacity: 1; }
                     100% { transform: scale(1); }
                 }
-                .animate-bounceIn {
-                    animation: bounceIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-                }
+                .animate-bounceIn { animation: bounceIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
             `}</style>
         </div>
     );
