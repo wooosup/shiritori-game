@@ -49,6 +49,7 @@ export default function GamePage() {
     const [shake, setShake] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLElement>(null);
     const isGameStarted = useRef(false);
 
     // --- 초기화 ---
@@ -82,6 +83,33 @@ export default function GamePage() {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }, 100);
     }, [history, loading]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (chatContainerRef.current) {
+                setTimeout(() => {
+                    chatContainerRef.current?.scrollTo({
+                        top: chatContainerRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            }
+        };
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+        } else {
+            window.addEventListener('resize', handleResize);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize);
+            } else {
+                window.removeEventListener('resize', handleResize);
+            }
+        };
+    }, []);
 
     // --- 에러 메시지 2초 뒤 사라짐 ---
     useEffect(() => {
@@ -326,7 +354,9 @@ export default function GamePage() {
                 </div>
 
                 {/* 채팅 영역 */}
-                <main className="flex-1 px-5 py-6 overflow-y-auto bg-slate-50 space-y-6">
+                <main
+                    ref={chatContainerRef}
+                    className="flex-1 px-5 py-6 overflow-y-auto bg-slate-50 space-y-6">
                     {history.map((msg, i) => (
                         <div key={i} className={`flex w-full ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}>
 
