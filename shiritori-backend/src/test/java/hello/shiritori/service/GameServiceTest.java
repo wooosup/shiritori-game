@@ -2,15 +2,16 @@ package hello.shiritori.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import hello.shiritori.dto.TurnRequest;
-import hello.shiritori.dto.TurnResponse;
-import hello.shiritori.entity.Game;
-import hello.shiritori.entity.GameTurn;
-import hello.shiritori.entity.JlptLevel;
-import hello.shiritori.entity.Word;
-import hello.shiritori.repository.GameRepository;
-import hello.shiritori.repository.GameTurnRepository;
-import hello.shiritori.repository.WordRepository;
+import hello.shiritori.domain.gamTurn.dto.TurnRequest;
+import hello.shiritori.domain.gamTurn.dto.TurnResponse;
+import hello.shiritori.domain.game.entity.Game;
+import hello.shiritori.domain.gamTurn.entity.GameTurn;
+import hello.shiritori.domain.game.entity.JlptLevel;
+import hello.shiritori.domain.game.service.GameService;
+import hello.shiritori.domain.word.entity.Word;
+import hello.shiritori.domain.game.repository.GameRepository;
+import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
+import hello.shiritori.domain.word.repository.WordRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

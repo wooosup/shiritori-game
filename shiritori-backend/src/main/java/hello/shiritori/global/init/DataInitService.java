@@ -2,10 +2,10 @@ package hello.shiritori.global.init;
 
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import hello.shiritori.dto.WordCsvDto;
-import hello.shiritori.entity.JlptLevel;
-import hello.shiritori.entity.Word;
-import hello.shiritori.repository.WordRepository;
+import hello.shiritori.domain.word.dto.WordCsvDto;
+import hello.shiritori.domain.game.entity.JlptLevel;
+import hello.shiritori.domain.word.entity.Word;
+import hello.shiritori.domain.word.repository.WordRepository;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;

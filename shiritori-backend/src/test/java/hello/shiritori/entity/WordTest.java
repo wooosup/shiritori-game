@@ -2,6 +2,8 @@ package hello.shiritori.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import hello.shiritori.domain.game.entity.JlptLevel;
+import hello.shiritori.domain.word.entity.Word;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

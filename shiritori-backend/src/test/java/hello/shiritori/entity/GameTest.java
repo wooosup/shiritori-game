@@ -1,8 +1,10 @@
 package hello.shiritori.entity;
 
-import static hello.shiritori.entity.JlptLevel.N5;
+import static hello.shiritori.domain.game.entity.JlptLevel.N5;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import hello.shiritori.domain.game.entity.Game;
+import hello.shiritori.domain.game.entity.GameStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

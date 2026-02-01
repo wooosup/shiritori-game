@@ -1,6 +1,7 @@
 package hello.shiritori.global.validator;
 
-import hello.shiritori.entity.Word;
+import hello.shiritori.domain.word.entity.Word;
+import hello.shiritori.global.exception.WordException;
 import hello.shiritori.global.utils.JapaneseUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
