@@ -6,9 +6,11 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
 // Axios 인스턴스 생성
 export const apiClient = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL: apiUrl,
     headers: {
         'Content-Type': 'application/json',
     },
