@@ -2,6 +2,7 @@ package hello.shiritori.domain.gamTurn.dto;
 
 import static hello.shiritori.domain.game.entity.GameStatus.GAME_OVER;
 import static hello.shiritori.domain.game.entity.GameStatus.PLAYING;
+import static hello.shiritori.domain.game.entity.GameStatus.WIN;
 
 import hello.shiritori.domain.game.entity.Game;
 import hello.shiritori.domain.word.entity.Word;
@@ -61,11 +62,11 @@ public class TurnResponse {
                 .build();
     }
 
-    public static TurnResponse ofUserWin(Game game, Word userWordEntity) {
+    public static TurnResponse ofUserWin(Game game, Word word) {
         return TurnResponse.builder()
-                .status("WIN")
-                .userWord(userWordEntity.getWord())
-                .userReading(userWordEntity.getReading())
+                .status(WIN.name())
+                .userWord(word.getWord())
+                .userReading(word.getReading())
                 .aiWord(null)
                 .currentScore(game.getScore())
                 .currentCombo(game.getMaxCombo())

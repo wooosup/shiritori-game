@@ -1,7 +1,7 @@
 package hello.shiritori.domain.game.service;
 
+import static hello.shiritori.domain.game.entity.GameStatus.*;
 import static hello.shiritori.domain.game.entity.GameStatus.PLAYING;
-import static hello.shiritori.domain.game.entity.GameStatus.WIN;
 
 import hello.shiritori.domain.game.dto.GameStartRequest;
 import hello.shiritori.domain.game.dto.GameStartResponse;
@@ -70,7 +70,11 @@ public class GameService {
         String userInput = request.getWord().trim();
 
         if ("TIME_OVER_SIGNAL".equals(userInput) || game.isTimeOut(TIME_LIMIT_SECONDS)) {
-            return finishGame(game, GameStatus.TIME_OVER, userInput, "시간 초과! 게임이 종료되었습니다.");
+            return loseAndFinishGame(game, TIME_OVER, userInput, "시간 초과! 게임이 종료되었습니다.");
+        }
+
+        if (userInput.endsWith("ん") || userInput.endsWith("ン")) {
+            return loseAndFinishGame(game, GAME_OVER, userInput, "패배! 'ん'으로 끝나는 단어를 썼습니다.");
         }
 
         Word userWord = wordFinder.findOrThrow(userInput);
@@ -82,7 +86,7 @@ public class GameService {
         game.applyCorrectAnswer(userWord.getLevel());
 
         if (userWord.endsWithN()) {
-            return finishGame(game, GameStatus.GAME_OVER, userWord.getWord(), "패배! 'ん'으로 끝나는 단어를 썼습니다.");
+            return loseAndFinishGame(game, GAME_OVER, userWord.getWord(), "패배! 'ん'으로 끝나는 단어를 썼습니다.");
         }
 
         return processAiTurn(game, userWord);
@@ -92,8 +96,8 @@ public class GameService {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(GameNotFound::new);
 
-        if (game.getStatus() == GameStatus.PLAYING) {
-            game.finish(GameStatus.GAME_OVER);
+        if (game.getStatus() == PLAYING) {
+            game.finish(GAME_OVER);
         }
     }
 
@@ -124,7 +128,7 @@ public class GameService {
         );
 
         if (word.isEmpty()) {
-            return finishGame(game, WIN, userWord.getWord(), "승리! AI가 더 이상 단어를 찾지 못했습니다.");
+            return winAndFinishGame(game, userWord.getWord(), "승리! AI가 더 이상 단어를 찾지 못했습니다.");
         }
 
         Word aiWord = word.get();
@@ -146,7 +150,12 @@ public class GameService {
         }
     }
 
-    private TurnResponse finishGame(Game game, GameStatus status, String word, String message) {
+    private TurnResponse winAndFinishGame(Game game, String word, String message) {
+        game.finish(WIN);
+        return TurnResponse.ofUserWin(game, wordFinder.findOrThrow(word));
+    }
+
+    private TurnResponse loseAndFinishGame(Game game, GameStatus status, String word, String message) {
         game.finish(status);
         return TurnResponse.ofUserLose(game, word, message);
     }
