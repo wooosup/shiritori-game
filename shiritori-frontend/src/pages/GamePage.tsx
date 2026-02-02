@@ -252,8 +252,13 @@ export default function GamePage() {
                 setTimeLeft(20);
             } else {
                 setIsGameOver(true);
-                setGameResult({ type: data.status === 'WIN' ? 'WIN' : 'LOSE', msg: data.message });
-                // 게임 끝나면 키보드 내리기
+
+                const isWin = data.status === 'WIN';
+                setGameResult({
+                    type: isWin ? 'WIN' : 'LOSE',
+                    msg: data.message
+                });
+
                 inputRef.current?.blur();
             }
         } catch (error: any) {
@@ -430,10 +435,9 @@ export default function GamePage() {
                     </form>
                 </footer>
 
-                {/* 결과 모달 (생략: 기존과 동일) */}
+                {/* 결과 모달 */}
                 {isGameOver && gameResult && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[4px] p-6">
-                        {/* ... 결과 모달 내용은 그대로 유지 ... */}
                         <div className="bg-white p-8 rounded-[32px] shadow-2xl text-center animate-bounceIn w-full max-w-sm">
                             <div className="text-6xl mb-4 drop-shadow-sm">{gameResult.type === 'WIN' ? '🎉' : '💀'}</div>
                             <h2 className="text-3xl font-black mb-3 text-slate-800 tracking-tight">{gameResult.type === 'WIN' ? 'YOU WIN!' : 'GAME OVER'}</h2>
