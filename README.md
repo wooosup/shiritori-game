@@ -4,7 +4,7 @@ Spring Boot와 React를 활용한 끝말잇기 게임입니다.
 
 ## 📷 Preview
 <div align="center">
-  <video src="[링크 주소]" width="80%" controls autoplay loop muted></video>
+  <video src="https://github.com/user-attachments/assets/c90a244a-8a84-470c-a5bb-e8f3f4335099" width="80%" controls autoplay loop muted></video>
 </div>
 
 ## 🛠 Stack
