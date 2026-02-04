@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {supabase, apiClient} from '../api/axios';
 import NicknameModal from '../components/NicknameModal';
 import RuleModal from "../components/RuleModal.tsx";
+import SearchModal from '../components/SearchModal';
 
 interface ApiResponse<T> {
     code: number;
@@ -28,6 +29,9 @@ export default function Home() {
     const [rankings, setRankings] = useState<Ranking[]>([]);
     const [showNicknameModal, setShowNicknameModal] = useState(false);
     const [showRuleModal, setShowRuleModal] = useState(false);
+    const [totalWords, setTotalWords] = useState<number>(0);
+    const [bannerWords, setBannerWords] = useState<any[]>([]);
+    const [showSearchModal, setShowSearchModal] = useState(false);
 
     // 로딩 상태
     const [loading, setLoading] = useState(true);
@@ -44,6 +48,14 @@ export default function Home() {
             }, 1000);
 
             try {
+                const [countRes, randomRes] = await Promise.allSettled([
+                    apiClient.get('/words/count'),
+                    apiClient.get('/words/random')
+                ]);
+
+                if (countRes.status === 'fulfilled') setTotalWords(countRes.value.data.data);
+                if (randomRes.status === 'fulfilled') setBannerWords(randomRes.value.data.data);
+
                 // 병렬 처리로 속도 향상
                 const [sessionRes, rankRes] = await Promise.allSettled([
                     supabase.auth.getSession(),
@@ -142,7 +154,9 @@ export default function Home() {
     if (loading) return <div className="flex h-screen items-center justify-center">로딩 중...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center relative pb-12">
+
+            <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
 
             {user && (
                 <NicknameModal
@@ -188,6 +202,19 @@ export default function Home() {
                 <h1 className="text-6xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 mb-10 tracking-tighter">
                     しりとり
                 </h1>
+
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-600 border border-gray-100">
+                        📚 등록된 단어: <span className="text-indigo-600">{totalWords.toLocaleString()}</span>개
+                    </div>
+                    <button
+                        onClick={() => setShowSearchModal(true)}
+                        className="bg-white p-2 rounded-full shadow-sm text-gray-500 hover:text-indigo-600 border border-gray-100 transition"
+                        title="단어 검색"
+                    >
+                        🔍
+                    </button>
+                </div>
 
                 {/* 👇 게임 컨트롤 박스 */}
                 <div className="flex flex-col items-center p-8 space-y-6 bg-white rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
@@ -271,6 +298,19 @@ export default function Home() {
                     </div>
                 </div>
             </main>
+            <div className="fixed bottom-0 w-full bg-indigo-900 text-white h-10 flex items-center overflow-hidden z-20 shadow-lg">
+                <div className="w-full overflow-hidden">
+                    <div className="animate-ticker pl-[100%]">
+                        {bannerWords.map((word, idx) => (
+                            <span key={idx} className="mx-8 font-medium text-sm text-indigo-100">
+                                {word.word} ({word.reading}) - {word.meaning}
+                            </span>
+                        ))}
+                        {/* 로딩 중일 때 표시할 문구 */}
+                        {bannerWords.length === 0 && "일본어 끝말잇기 게임에 오신 것을 환영합니다! 🎉"}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

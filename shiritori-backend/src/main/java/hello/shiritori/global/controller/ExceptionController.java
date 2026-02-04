@@ -2,6 +2,7 @@ package hello.shiritori.global.controller;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 import hello.shiritori.global.api.ApiResponse;
 import hello.shiritori.global.exception.ShiritoriException;
@@ -45,6 +46,13 @@ public class ExceptionController {
     public ApiResponse<Void> generalServerError(Exception e) {
         log.error("서버 오류: {}", e.getMessage(), e);
         return ApiResponse.fail(INTERNAL_SERVER_ERROR, "서버에 오류가 발생했습니다.");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(NOT_FOUND)
+    public ApiResponse<Void> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.error("잘못된 인자 오류: {}", e.getMessage(), e);
+        return ApiResponse.fail(NOT_FOUND, e.getMessage());
     }
 
 }

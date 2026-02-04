@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+    animation: shake 0.3s ease-in-out;
+}
+
+@keyframes ticker {
+    0% {
+        transform: translateX(0); /* 시작: 밀려난 위치 그대로 */
+    }
+    100% {
+        transform: translateX(-100%); /* 끝: 왼쪽으로 자기 길이만큼 이동 */
+    }
+}
+
+.animate-ticker {
+    display: inline-block;
+    white-space: nowrap; /* 줄바꿈 방지 */
+    padding-left: 100%;  /* 화면 오른쪽 끝에서 시작하게 밀어둠 */
+    animation: ticker 30s linear infinite; /* 30초 동안 무한 반복 (속도 조절 가능) */
+}
+
+.animate-ticker:hover {
+    animation-play-state: paused;
+}
