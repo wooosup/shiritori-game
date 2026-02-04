@@ -1,6 +1,7 @@
 package hello.shiritori.domain.word.repository;
 
 import hello.shiritori.domain.word.entity.Word;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 public interface WordRepository extends JpaRepository<Word, Long> {
 
     Optional<Word> findFirstByWord(String word);
+
+    Optional<Word> findByWord(String word);
 
     Optional<Word> findTopByReadingOrderByLevelDesc(String reading);
 
@@ -31,5 +34,8 @@ public interface WordRepository extends JpaRepository<Word, Long> {
                               @Param("level") String level);
 
     boolean existsByWord(String word);
+
+    @Query(value = "SELECT * FROM game_words ORDER BY RANDOM() LIMIT :limit", nativeQuery = true)
+    List<Word> findRandomWords(@Param("limit") int limit);
 
 }
