@@ -2,6 +2,7 @@ import {useState, useEffect, useRef} from 'react'; // useRef 추가
 import {useNavigate} from 'react-router-dom';
 import {supabase, apiClient} from '../api/axios';
 import NicknameModal from '../components/NicknameModal';
+import RuleModal from "../components/RuleModal.tsx";
 
 interface ApiResponse<T> {
     code: number;
@@ -26,6 +27,7 @@ export default function Home() {
     const [level, setLevel] = useState('N5');
     const [rankings, setRankings] = useState<Ranking[]>([]);
     const [showNicknameModal, setShowNicknameModal] = useState(false);
+    const [showRuleModal, setShowRuleModal] = useState(false);
 
     // 로딩 상태
     const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function Home() {
         init();
 
         // Auth 상태 감지 리스너
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        const {data: authListener} = supabase.auth.onAuthStateChange((event, session) => {
             if (!isMounted.current) return;
 
             if (event === 'SIGNED_IN' && session) {
@@ -97,7 +99,8 @@ export default function Home() {
                             if (!myNick) setShowNicknameModal(true);
                         }
                     })
-                    .catch(() => {});
+                    .catch(() => {
+                    });
             }
             // 🚨 SIGNED_OUT 일 때는 상태 변경 하지 않음 (handleLogout에서 페이지를 새로고침 하므로)
         });
@@ -118,7 +121,8 @@ export default function Home() {
 
     // React 상태 업데이트 없이 브라우저 강제 리셋
     const handleLogout = () => {
-        supabase.auth.signOut().catch(() => {});
+        supabase.auth.signOut().catch(() => {
+        });
         localStorage.clear();
         window.location.replace('/');
     };
@@ -154,6 +158,11 @@ export default function Home() {
                 />
             )}
 
+            <RuleModal
+                isOpen={showRuleModal}
+                onClose={() => setShowRuleModal(false)}
+            />
+
             <header className="w-full flex justify-end p-4 bg-white shadow-sm absolute top-0 z-10">
                 {user ? (
                     <div className="flex items-center gap-4">
@@ -168,7 +177,8 @@ export default function Home() {
                 ) : (
                     <button onClick={handleLogin}
                             className="px-6 py-2 font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
-                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="google"/>
+                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5"
+                             alt="google"/>
                         로그인
                     </button>
                 )}
@@ -179,9 +189,26 @@ export default function Home() {
                     しりとり
                 </h1>
 
+                {/* 👇 게임 컨트롤 박스 */}
                 <div className="flex flex-col items-center p-8 space-y-6 bg-white rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
+
                     <div className="w-full">
-                        <label className="block mb-2 font-bold text-gray-700">난이도 선택</label>
+                        {/* ✅ 라벨과 버튼을 한 줄에 배치 (Flexbox) */}
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="font-bold text-gray-700">난이도 선택</label>
+
+                            <button
+                                onClick={() => setShowRuleModal(true)}
+                                className="text-xs sm:text-sm font-medium text-gray-400 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                                </svg>
+                                게임 규칙
+                            </button>
+                        </div>
+
+                        {/* 셀렉트 박스 */}
                         <select
                             value={level}
                             onChange={(e) => setLevel(e.target.value)}
@@ -218,13 +245,15 @@ export default function Home() {
                             <tbody className="text-sm">
                             {rankings.length > 0 ? (
                                 rankings.map((rank, index) => (
-                                    <tr key={index} className="border-b last:border-0 hover:bg-indigo-50/50 transition-colors">
+                                    <tr key={index}
+                                        className="border-b last:border-0 hover:bg-indigo-50/50 transition-colors">
                                         <td className="p-3 text-center font-bold text-gray-400">
                                             {index < 3 ? ['🥇', '🥈', '🥉'][index] : index + 1}
                                         </td>
                                         <td className="p-3 font-bold text-gray-800 truncate">{rank.nickname}</td>
                                         <td className="hidden sm:table-cell p-3 text-center">
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600">{rank.level}</span>
+                                                <span
+                                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600">{rank.level}</span>
                                         </td>
                                         <td className="p-3 text-center text-gray-600">{rank.maxCombo}</td>
                                         <td className="p-3 text-right font-black text-indigo-600">{rank.score.toLocaleString()}</td>
