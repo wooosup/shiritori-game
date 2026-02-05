@@ -1,15 +1,29 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import {BrowserRouter, Routes, Route, useLocation} from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import { supabase } from './api/axios';
 import { useAuthStore } from './stores/authStore';
 import Home from './pages/Home';
 import LoginModal from './components/LoginModal';
 import GamePage from './pages/GamePage';
 
+
+const RouteTracker = () => {
+    const location = useLocation();
+
+    useEffect(() => {
+        ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+    }, [location]);
+
+    return null;
+};
+
 function App() {
     const { setSession, closeLoginModal } = useAuthStore();
 
     useEffect(() => {
+        ReactGA.initialize("G-E9JYF0HN3G");
+
         // 1. 초기 세션 확인
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
@@ -21,7 +35,7 @@ function App() {
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
             if (session) {
-                closeLoginModal(); // 로그인 성공하면 팝업 닫기
+                closeLoginModal();
             }
         });
 
@@ -30,6 +44,8 @@ function App() {
 
     return (
         <BrowserRouter>
+            <RouteTracker/>
+
             {/* 라우트 설정 */}
             <Routes>
                 <Route path="/" element={<Home />} />
