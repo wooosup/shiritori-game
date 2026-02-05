@@ -25,9 +25,12 @@ export default function RuleModal({ isOpen, onClose }: Readonly<Props>) {
 
                 <div className="space-y-4 text-gray-700 text-sm sm:text-base leading-relaxed">
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                        <p className="font-bold text-indigo-800 mb-1">🎯 기본 룰</p>
-                        <p>AI와 번갈아가며 일본어 단어를 이어갑니다.</p>
-                        <p>제한시간(20초) 내에 입력해야 합니다.</p>
+                        <p className="font-bold text-indigo-800 mb-2">🎯 기본 룰</p>
+                        <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                            <li>AI와 번갈아가며 단어를 이어가세요.</li>
+                            <li>제한시간 <span className="font-bold text-indigo-600">20초</span> 내에 입력해야 해요.</li>
+                            <li>사전에 등록된 <span className="font-bold text-indigo-600">명사</span>만 가능합니다.</li>
+                        </ul>
                     </div>
 
                     <ul className="list-disc pl-5 space-y-2 marker:text-indigo-400">
