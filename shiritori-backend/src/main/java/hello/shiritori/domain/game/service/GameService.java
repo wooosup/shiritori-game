@@ -13,6 +13,7 @@ import hello.shiritori.domain.gamTurn.entity.GameTurn;
 import hello.shiritori.domain.game.entity.JlptLevel;
 import hello.shiritori.domain.profile.entity.Profile;
 import hello.shiritori.domain.word.entity.Word;
+import hello.shiritori.global.exception.GameException;
 import hello.shiritori.global.utils.WordFinder;
 import hello.shiritori.global.utils.JapaneseUtils;
 import hello.shiritori.global.exception.DuplicateWordException;
@@ -38,7 +39,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class GameService {
 
     private static final long TIME_LIMIT_SECONDS = 20;
-    public static final String START_WORD = "しりとり";
+    private static final String START_WORD_TEXT = "しりとり";
+    private static final String SIGNAL_TIME_OVER = "TIME_OVER_SIGNAL";
+    private static final String SPEAKER_AI = "AI";
+    private static final String SPEAKER_USER = "USER";
 
     private final GameRepository gameRepository;
     private final GameTurnRepository gameTurnRepository;
@@ -57,32 +61,29 @@ public class GameService {
         Game game = Game.create(profile, request.getLevel());
         gameRepository.save(game);
 
-        saveTurn(game, "AI", START_WORD);
+        saveTurn(game, SPEAKER_AI, START_WORD_TEXT);
         return GameStartResponse.of(game.getId());
     }
 
     public TurnResponse playTurn(Long gameId, TurnRequest request) {
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(GameNotFound::new);
-
+        Game game = findGameOrThrow(gameId);
         validateGameStatus(game.getStatus());
 
         String userInput = request.getWord().trim();
 
-        if ("TIME_OVER_SIGNAL".equals(userInput) || game.isTimeOut(TIME_LIMIT_SECONDS)) {
+        if (isTimeOver(game, userInput)) {
             return loseAndFinishGame(game, TIME_OVER, userInput, "시간 초과! 게임이 종료되었습니다.");
         }
 
-        if (userInput.endsWith("ん") || userInput.endsWith("ン")) {
+        if (JapaneseUtils.endsWithN(userInput)) {
             return loseAndFinishGame(game, GAME_OVER, userInput, "패배! 'ん'으로 끝나는 단어를 썼습니다.");
         }
 
         Word userWord = wordFinder.findOrThrow(userInput);
 
-        validateLastWordConnection(game, userWord);
-        validateDuplicateWord(game, userWord);
+        validateMove(game, userWord);
 
-        saveTurn(game, "USER", userWord.getWord());
+        saveTurn(game, SPEAKER_USER, userWord.getWord());
         game.applyCorrectAnswer(userWord.getLevel());
 
         if (userWord.endsWithN()) {
@@ -92,29 +93,65 @@ public class GameService {
         return processAiTurn(game, userWord);
     }
 
+    public TurnResponse passTurn(Long gameId) {
+        Game game = findGameOrThrow(gameId);
+
+        validateGameStatus(game.getStatus());
+        validatePassCount(game.getPassCount());
+
+        game.decreasePassCount();
+
+        Word lastWord = getLastWord(game);
+
+        Word nextWord = findNextAiWord(game, lastWord)
+                .orElseThrow(() -> new WordException("AI도 이을 단어를 못 찾았습니다. (무승부?)"));
+
+        saveTurn(game, SPEAKER_AI, nextWord.getWord());
+        game.updateLastTurnTime();
+
+        return TurnResponse.ofPass(game, nextWord);
+    }
+
     public void quitGame(Long gameId) {
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(GameNotFound::new);
+        Game game = findGameOrThrow(gameId);
 
         if (game.getStatus() == PLAYING) {
             game.finish(GAME_OVER);
         }
     }
 
-    private void validateLastWordConnection(Game game, Word userWord) {
+    private Game findGameOrThrow(Long gameId) {
+        return gameRepository.findById(gameId)
+                .orElseThrow(GameNotFound::new);
+    }
+
+    private boolean isTimeOver(Game game, String input) {
+        return SIGNAL_TIME_OVER.equals(input) || game.isTimeOut(TIME_LIMIT_SECONDS);
+    }
+
+    private void validateMove(Game game, Word userWord) {
+        Word lastWord = getLastWord(game);
+        shiritoriValidator.validateConnection(lastWord, userWord);
+        validateDuplicateWord(game, userWord);
+    }
+
+    private Word getLastWord(Game game) {
         String lastWordText = gameTurnRepository.findFirstByGameOrderByCreatedAtDesc(game)
                 .map(GameTurn::getWordText)
                 .orElseThrow(() -> new WordException("이전 단어 정보를 찾을 수 없습니다."));
 
-        Word lastWord = wordFinder.findOrThrow(lastWordText);
-
-        shiritoriValidator.validateConnection(lastWord, userWord);
+        return wordFinder.findOrThrow(lastWordText);
     }
 
-    private void validateDuplicateWord(Game game, Word word) {
-        if (gameTurnRepository.existsByGameAndWordText(game, word.getWord())) {
-            throw new DuplicateWordException("이미 사용된 단어 입니다!");
-        }
+    private Optional<Word> findNextAiWord(Game game, Word word) {
+        String startChar = word.getEffectiveEndChar();
+
+        return wordRepository.findAiWord(
+                game.getId(),
+                JapaneseUtils.toHiragana(startChar),
+                JapaneseUtils.toKatakana(startChar),
+                game.getLevel().name()
+        );
     }
 
     private TurnResponse processAiTurn(Game game, Word userWord) {
@@ -128,7 +165,7 @@ public class GameService {
         );
 
         if (word.isEmpty()) {
-            return winAndFinishGame(game, userWord.getWord(), "승리! AI가 더 이상 단어를 찾지 못했습니다.");
+            return winAndFinishGame(game, userWord.getWord());
         }
 
         Word aiWord = word.get();
@@ -136,6 +173,18 @@ public class GameService {
         game.updateLastTurnTime();
 
         return TurnResponse.ofSuccess(game, userWord, aiWord);
+    }
+
+    private void validatePassCount(int passCount) {
+        if (passCount <= 0) {
+            throw new GameException("PASS 기회를 모두 소진했습니다!");
+        }
+    }
+
+    private void validateDuplicateWord(Game game, Word word) {
+        if (gameTurnRepository.existsByGameAndWordText(game, word.getWord())) {
+            throw new DuplicateWordException("이미 사용된 단어 입니다!");
+        }
     }
 
     private void validateGameStatus(GameStatus status) {
@@ -150,7 +199,7 @@ public class GameService {
         }
     }
 
-    private TurnResponse winAndFinishGame(Game game, String word, String message) {
+    private TurnResponse winAndFinishGame(Game game, String word) {
         game.finish(WIN);
         return TurnResponse.ofUserWin(game, wordFinder.findOrThrow(word));
     }
@@ -162,9 +211,7 @@ public class GameService {
 
     private void saveTurn(Game game, String speaker, String wordText) {
         int nextTurnNum = (int) gameTurnRepository.countByGame(game) + 1;
-
-        GameTurn turn = GameTurn.of(game, nextTurnNum, speaker, wordText);
-        gameTurnRepository.save(turn);
+        gameTurnRepository.save(GameTurn.of(game, nextTurnNum, speaker, wordText));
     }
 
 }

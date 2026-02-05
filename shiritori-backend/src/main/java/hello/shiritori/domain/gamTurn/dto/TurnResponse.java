@@ -21,10 +21,11 @@ public class TurnResponse {
     private final int currentScore;
     private final int currentCombo;
     private final String message;
+    private final int remainingPass;
 
     @Builder
-    private TurnResponse(String status, String userWord, String userReading, String aiWord, String aiReading, String aiMeaning,
-                         int currentScore, int currentCombo, String message) {
+    private TurnResponse(String status, String userWord, String userReading, String aiWord, String aiReading,
+                         String aiMeaning, int currentScore, int currentCombo, String message, int remainingPass) {
         this.status = status;
         this.userWord = userWord;
         this.userReading = userReading;
@@ -34,6 +35,7 @@ public class TurnResponse {
         this.currentScore = currentScore;
         this.currentCombo = currentCombo;
         this.message = message;
+        this.remainingPass = remainingPass;
     }
 
     public static TurnResponse ofSuccess(Game game, Word userWord, Word aiWord) {
@@ -46,6 +48,7 @@ public class TurnResponse {
                 .aiMeaning(aiWord.getMeaning())
                 .currentScore(game.getScore())
                 .currentCombo(game.getMaxCombo())
+                .remainingPass(game.getPassCount())
                 .message("AI가 '" + aiWord.getWord() + "'(으)로 받아쳤습니다!")
                 .build();
     }
@@ -58,6 +61,7 @@ public class TurnResponse {
                 .aiWord(null)
                 .currentScore(game.getScore())
                 .currentCombo(game.getMaxCombo())
+                .remainingPass(game.getPassCount())
                 .message(message)
                 .build();
     }
@@ -70,7 +74,24 @@ public class TurnResponse {
                 .aiWord(null)
                 .currentScore(game.getScore())
                 .currentCombo(game.getMaxCombo())
+                .remainingPass(game.getPassCount())
                 .message("AI가 항복했습니다! 당신의 승리입니다! 🎉")
                 .build();
     }
+
+    public static TurnResponse ofPass(Game game, Word aiWord) {
+        return TurnResponse.builder()
+                .status(PLAYING.name())
+                .userWord(null)
+                .userReading(null)
+                .aiWord(aiWord.getWord())
+                .aiReading(aiWord.getReading())
+                .aiMeaning(aiWord.getMeaning())
+                .currentScore(game.getScore())
+                .currentCombo(game.getMaxCombo())
+                .remainingPass(game.getPassCount())
+                .message("PASS 사용! AI가 '" + aiWord.getWord() + "'(으)로 이어갑니다.")
+                .build();
+    }
+
 }

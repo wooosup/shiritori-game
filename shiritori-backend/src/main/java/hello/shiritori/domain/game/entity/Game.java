@@ -1,6 +1,6 @@
 package hello.shiritori.domain.game.entity;
 
-import static hello.shiritori.domain.game.entity.GameStatus.*;
+import static hello.shiritori.domain.game.entity.GameStatus.PLAYING;
 
 import hello.shiritori.domain.profile.entity.Profile;
 import jakarta.persistence.Column;
@@ -64,12 +64,15 @@ public class Game {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
+    @Column(name = "pass_count")
+    private int passCount;
+
     @Version
     private Long version;
 
     @Builder
     public Game(Profile user, int score, int maxCombo, int currentCombo, GameStatus status, JlptLevel level,
-                LocalDateTime lastTurnAt, LocalDateTime startedAt, LocalDateTime endedAt) {
+                LocalDateTime lastTurnAt, LocalDateTime startedAt, LocalDateTime endedAt, int passCount) {
         this.user = user;
         this.score = score;
         this.maxCombo = maxCombo;
@@ -79,6 +82,7 @@ public class Game {
         this.lastTurnAt = lastTurnAt;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
+        this.passCount = passCount;
     }
 
     public static Game create(Profile user, JlptLevel level) {
@@ -91,6 +95,7 @@ public class Game {
                 .level(level)
                 .lastTurnAt(LocalDateTime.now())
                 .startedAt(LocalDateTime.now())
+                .passCount(3)
                 .build();
     }
 
@@ -151,6 +156,10 @@ public class Game {
         if (this.status != PLAYING) {
             throw new IllegalStateException("이미 종료된 게임입니다.");
         }
+    }
+
+    public void decreasePassCount() {
+        this.passCount--;
     }
 
 }

@@ -1,11 +1,11 @@
 package hello.shiritori.global.exception;
 
-import org.springframework.http.HttpStatus;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 public class GameException extends ShiritoriException {
 
-    public GameException(String message, HttpStatus status) {
-        super(message, status);
+    public GameException(String message) {
+        super(message, BAD_REQUEST);
     }
 
 }

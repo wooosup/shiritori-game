@@ -64,4 +64,12 @@ public class JapaneseUtils {
         return "ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ".contains(lastChar);
     }
 
+    public static boolean endsWithN(String input) {
+        if (input == null || input.isEmpty()) {
+            return false;
+        }
+        char lastChar = input.charAt(input.length() - 1);
+        return lastChar == 'ん' || lastChar == 'ン';
+    }
+
 }

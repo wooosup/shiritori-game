@@ -37,6 +37,12 @@ public class GameController {
         return ApiResponse.ok(response);
     }
 
+    @PostMapping("/{gameId}/pass")
+    public ApiResponse<TurnResponse> passTurn(@PathVariable Long gameId) {
+        TurnResponse response = gameService.passTurn(gameId);
+        return ApiResponse.ok(response);
+    }
+
     @PostMapping("/{gameId}/quit")
     public ApiResponse<Void> quitGame(@PathVariable Long gameId) {
         gameService.quitGame(gameId);
