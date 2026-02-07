@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,21 +25,23 @@ public class WordBookController {
     private final WordBookService wordBookService;
 
     @PostMapping
-    public ApiResponse<WordBookResponse> addWord(@AuthenticationPrincipal UUID userId,
+    public ApiResponse<WordBookResponse> addWord(@AuthenticationPrincipal Jwt jwt,
                                                  @RequestBody AddWordRequest request) {
+        UUID userId = UUID.fromString(jwt.getSubject());
         WordBookResponse response = wordBookService.save(userId, request.getWord());
         return ApiResponse.ok(response);
     }
 
     @GetMapping
-    public ApiResponse<List<WordBookResponse>> getMyList(@AuthenticationPrincipal UUID userId) {
+    public ApiResponse<List<WordBookResponse>> getMyList(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
         List<WordBookResponse> list = wordBookService.getWordBook(userId);
         return ApiResponse.ok(list);
     }
 
     @DeleteMapping("/{wordBookId}")
-    public ApiResponse<Void> deleteWord(@AuthenticationPrincipal UUID userId, @PathVariable Long wordBookId) {
-
+    public ApiResponse<Void> deleteWord(@AuthenticationPrincipal Jwt jwt, @PathVariable Long wordBookId) {
+        UUID userId = UUID.fromString(jwt.getSubject());
         wordBookService.delete(userId, wordBookId);
         return ApiResponse.ok(null);
     }

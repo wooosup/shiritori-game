@@ -2,11 +2,13 @@ package hello.shiritori.domain.wordBook.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor
 public class AddWordRequest {
 
-    private final String word;
+    private String word;
 
     @Builder
     private AddWordRequest(String word) {
