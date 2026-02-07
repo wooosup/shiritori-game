@@ -168,10 +168,16 @@ export default function Home() {
             {user && (
                 <NicknameModal
                     isOpen={showNicknameModal}
+
+                    canClose={!!nickname}
+
+                    onClose={() => {
+                        if (nickname) setShowNicknameModal(false);
+                    }}
+
                     onSuccess={(newNick) => {
                         setNickname(newNick);
                         setShowNicknameModal(false);
-                        // 랭킹 갱신 (단순 API 호출)
                         apiClient.get<ApiResponse<Ranking[]>>('/ranks')
                             .then(res => setRankings(res.data.data))
                             .catch(console.error);
@@ -198,9 +204,13 @@ export default function Home() {
 
                         <div className="h-4 w-px bg-gray-300 hidden sm:block"></div>
 
-                        <span className="text-gray-700 font-bold">
+                        <button
+                            onClick={() => setShowNicknameModal(true)}
+                            className="text-gray-700 font-bold hover:text-indigo-600 hover:underline decoration-2 underline-offset-4 transition cursor-pointer"
+                            title="닉네임 변경"
+                        >
                             {nickname ? `${nickname}님` : '닉네임 설정 중...'}
-                        </span>
+                        </button>
 
                         <button onClick={handleLogout}
                                 className="px-4 py-2 text-sm text-red-500 border border-red-500 rounded-lg hover:bg-red-50 transition">
