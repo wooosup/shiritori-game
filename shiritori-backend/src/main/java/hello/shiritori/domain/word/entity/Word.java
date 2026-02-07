@@ -40,10 +40,10 @@ public class Word {
     @Column(columnDefinition = "TEXT")
     private String meaning;
 
-    @Column(name = "starts_with", nullable = false, columnDefinition = "bpchar(1)")
+    @Column(name = "starts_with", length = 1, nullable = false)
     private String startsWith;
 
-    @Column(name = "ends_with", nullable = false, columnDefinition = "bpchar(1)")
+    @Column(name = "ends_with", length = 1, nullable = false)
     private String endsWith;
 
     @Builder

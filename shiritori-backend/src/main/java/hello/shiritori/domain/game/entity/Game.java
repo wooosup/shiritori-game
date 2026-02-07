@@ -58,9 +58,6 @@ public class Game {
     @Column(name = "last_turn_at")
     private LocalDateTime lastTurnAt;
 
-    @Column(name = "started_at", updatable = false)
-    private LocalDateTime startedAt;
-
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
@@ -72,7 +69,7 @@ public class Game {
 
     @Builder
     public Game(Profile user, int score, int maxCombo, int currentCombo, GameStatus status, JlptLevel level,
-                LocalDateTime lastTurnAt, LocalDateTime startedAt, LocalDateTime endedAt, int passCount) {
+                LocalDateTime lastTurnAt, LocalDateTime endedAt, int passCount) {
         this.user = user;
         this.score = score;
         this.maxCombo = maxCombo;
@@ -80,7 +77,6 @@ public class Game {
         this.status = status;
         this.level = level;
         this.lastTurnAt = lastTurnAt;
-        this.startedAt = startedAt;
         this.endedAt = endedAt;
         this.passCount = passCount;
     }
@@ -94,7 +90,6 @@ public class Game {
                 .status(PLAYING)
                 .level(level)
                 .lastTurnAt(LocalDateTime.now())
-                .startedAt(LocalDateTime.now())
                 .passCount(3)
                 .build();
     }

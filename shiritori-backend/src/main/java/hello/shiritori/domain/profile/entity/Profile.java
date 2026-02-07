@@ -5,7 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -27,15 +26,11 @@ public class Profile {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
     @Builder
     private Profile(UUID id, String avatarUrl) {
         this.id = id;
         this.nickname = null;
         this.avatarUrl = avatarUrl;
-        this.createdAt = LocalDateTime.now();
     }
 
     public static Profile of(UUID id) {

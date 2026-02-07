@@ -1,5 +1,6 @@
 package hello.shiritori.domain.gamTurn.entity;
 
+import hello.shiritori.domain.common.BaseEntity;
 import hello.shiritori.domain.game.entity.Game;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "game_turns")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class GameTurn {
+public class GameTurn extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,16 +39,12 @@ public class GameTurn {
     @Column(name = "word_text", nullable = false, length = 100)
     private String wordText;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
     @Builder
-    private GameTurn(Game game, int turnNumber, String speaker, String wordText, LocalDateTime createdAt) {
+    private GameTurn(Game game, int turnNumber, String speaker, String wordText) {
         this.game = game;
         this.turnNumber = turnNumber;
         this.speaker = speaker;
         this.wordText = wordText;
-        this.createdAt = createdAt;
     }
 
     public static GameTurn of(Game game, int turnNumber, String speaker, String wordText) {
@@ -57,7 +53,6 @@ public class GameTurn {
                 .turnNumber(turnNumber)
                 .speaker(speaker)
                 .wordText(wordText)
-                .createdAt(LocalDateTime.now())
                 .build();
     }
 
