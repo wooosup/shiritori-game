@@ -1,32 +1,34 @@
 package hello.shiritori.domain.game.service;
 
-import static hello.shiritori.domain.game.entity.GameStatus.*;
+import static hello.shiritori.domain.game.entity.GameStatus.GAME_OVER;
 import static hello.shiritori.domain.game.entity.GameStatus.PLAYING;
+import static hello.shiritori.domain.game.entity.GameStatus.TIME_OVER;
+import static hello.shiritori.domain.game.entity.GameStatus.WIN;
 
-import hello.shiritori.domain.game.dto.GameStartRequest;
-import hello.shiritori.domain.game.dto.GameStartResponse;
 import hello.shiritori.domain.gamTurn.dto.TurnRequest;
 import hello.shiritori.domain.gamTurn.dto.TurnResponse;
+import hello.shiritori.domain.gamTurn.entity.GameTurn;
+import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
+import hello.shiritori.domain.game.dto.GameStartRequest;
+import hello.shiritori.domain.game.dto.GameStartResponse;
 import hello.shiritori.domain.game.entity.Game;
 import hello.shiritori.domain.game.entity.GameStatus;
-import hello.shiritori.domain.gamTurn.entity.GameTurn;
 import hello.shiritori.domain.game.entity.JlptLevel;
+import hello.shiritori.domain.game.repository.GameRepository;
 import hello.shiritori.domain.profile.entity.Profile;
+import hello.shiritori.domain.profile.repository.ProfileRepository;
 import hello.shiritori.domain.word.entity.Word;
-import hello.shiritori.global.exception.GameException;
-import hello.shiritori.global.utils.WordFinder;
-import hello.shiritori.global.utils.JapaneseUtils;
+import hello.shiritori.domain.word.repository.WordRepository;
 import hello.shiritori.global.exception.DuplicateWordException;
 import hello.shiritori.global.exception.GameAlreadyException;
+import hello.shiritori.global.exception.GameException;
 import hello.shiritori.global.exception.GameLevelException;
 import hello.shiritori.global.exception.GameNotFound;
-import hello.shiritori.global.validator.ShiritoriValidator;
 import hello.shiritori.global.exception.UserNotFound;
 import hello.shiritori.global.exception.WordException;
-import hello.shiritori.domain.game.repository.GameRepository;
-import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
-import hello.shiritori.domain.profile.repository.ProfileRepository;
-import hello.shiritori.domain.word.repository.WordRepository;
+import hello.shiritori.global.utils.JapaneseUtils;
+import hello.shiritori.global.utils.WordFinder;
+import hello.shiritori.global.validator.ShiritoriValidator;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +41,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class GameService {
 
     private static final long TIME_LIMIT_SECONDS = 20;
-    private static final String START_WORD_TEXT = "しりとり";
     private static final String SIGNAL_TIME_OVER = "TIME_OVER_SIGNAL";
     private static final String SPEAKER_AI = "AI";
     private static final String SPEAKER_USER = "USER";
@@ -61,8 +62,11 @@ public class GameService {
         Game game = Game.create(profile, request.getLevel());
         gameRepository.save(game);
 
-        saveTurn(game, SPEAKER_AI, START_WORD_TEXT);
-        return GameStartResponse.of(game.getId());
+        Word startWord = wordRepository.findRandomStartWord(game.getLevel().name())
+                .orElseThrow(() -> new WordException("시작 단어를 찾을 수 없습니다."));
+
+        saveTurn(game, SPEAKER_AI, startWord.getWord());
+        return GameStartResponse.of(game.getId(), startWord.getWord(), startWord.getReading());
     }
 
     public TurnResponse playTurn(Long gameId, TurnRequest request) {

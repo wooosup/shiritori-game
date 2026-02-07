@@ -17,6 +17,16 @@ public interface WordRepository extends JpaRepository<Word, Long> {
     Optional<Word> findTopByReadingOrderByLevelDesc(String reading);
 
     @Query(value = """
+            select * from game_words 
+            where level = :level
+            and reading not like '%ん'
+            and reading not like '%ン'
+            order by random()
+            limit 1
+            """, nativeQuery = true)
+    Optional<Word> findRandomStartWord(@Param("level") String level);
+
+    @Query(value = """
             SELECT w.* FROM game_words w
             WHERE (w.starts_with = :hira OR w.starts_with = :kata)
               AND w.level = :level
