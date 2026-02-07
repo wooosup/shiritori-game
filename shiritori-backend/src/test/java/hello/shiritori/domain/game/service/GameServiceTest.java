@@ -1,4 +1,4 @@
-package hello.shiritori.service;
+package hello.shiritori.domain.game.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,7 +7,6 @@ import hello.shiritori.domain.gamTurn.dto.TurnResponse;
 import hello.shiritori.domain.game.entity.Game;
 import hello.shiritori.domain.gamTurn.entity.GameTurn;
 import hello.shiritori.domain.game.entity.JlptLevel;
-import hello.shiritori.domain.game.service.GameService;
 import hello.shiritori.domain.word.entity.Word;
 import hello.shiritori.domain.game.repository.GameRepository;
 import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
@@ -36,13 +35,15 @@ class GameServiceTest {
 
     @Test
     @DisplayName("플레이어가 올바른 단어를 입력했을 때, AI가 응답 단어를 반환해야 한다.")
-    void playTurn_Real_Success() {
+    void playTurn() {
         // given
+        wordRepository.deleteAll();
+
         Game game = Game.create(null, JlptLevel.N5);
         gameRepository.save(game);
 
         saveTempWordIfNotExist("家族", "かぞく", "가족");
-        saveTempWordIfNotExist("曇", "くも", "구름");
+        saveTempWordIfNotExist("雲", "くも", "구름");
         saveTempWordIfNotExist("森", "もり", "숲");
 
         GameTurn lastTurn = GameTurn.builder()
@@ -59,7 +60,7 @@ class GameServiceTest {
 
         // then
         assertThat(response.getStatus()).isEqualTo("PLAYING");
-        assertThat(response.getUserWord()).isEqualTo("曇");
+        assertThat(response.getUserWord()).isEqualTo("雲");
         assertThat(response.getAiWord()).isEqualTo("森");
     }
 
