@@ -8,17 +8,15 @@ import lombok.Getter;
 public class ProfileResponse {
 
     private final String nickname;
-    private final String avatarUrl;
 
     @Builder
-    private ProfileResponse(Profile profile) {
-        this.nickname = profile.getNickname();
-        this.avatarUrl = profile.getAvatarUrl();
+    private ProfileResponse(String nickname) {
+        this.nickname = nickname;
     }
 
     public static ProfileResponse of(Profile profile) {
         return ProfileResponse.builder()
-                .profile(profile)
+                .nickname(profile.getNickname())
                 .build();
     }
 
