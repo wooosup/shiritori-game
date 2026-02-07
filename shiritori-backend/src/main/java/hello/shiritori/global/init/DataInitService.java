@@ -11,6 +11,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -34,8 +35,11 @@ public class DataInitService implements CommandLineRunner {
         }
 
         log.info("CSV 데이터 로딩 시작..");
-        ClassPathResource resource = new ClassPathResource("data/jlpt_words2.csv");
-        
+
+        Set<String> existingWords = wordRepository.findAllWordsInSet();
+        log.info("현재 DB에 존재하는 단어 수: {}개", existingWords.size());
+        ClassPathResource resource = new ClassPathResource("data/output.csv");
+
         try (Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
             CsvToBean<WordCsvDto> csvToBean = new CsvToBeanBuilder<WordCsvDto>(reader)
                     .withType(WordCsvDto.class)
@@ -43,41 +47,57 @@ public class DataInitService implements CommandLineRunner {
                     .build();
 
             List<WordCsvDto> csvRows = csvToBean.parse();
-            List<Word> allEntities = new ArrayList<>();
+            List<Word> newEntities = new ArrayList<>();
+            int count = 0;
 
             for (WordCsvDto row : csvRows) {
-                if (row.getReading() == null || row.getReading().isBlank()) {
+                String targetWord = row.getWord();
+
+                if (row.getWord() == null || row.getWord().isBlank()
+                        || row.getReading() == null || row.getReading().isBlank()
+                        || row.getLevel() == null || row.getLevel().isBlank()) {
                     continue;
                 }
-                 allEntities.add(mapToEntity(row));
+
+                if (existingWords.contains(targetWord)) {
+                    count++;
+                    continue;
+                }
+                newEntities.add(mapToEntity(row));
+                existingWords.add(targetWord);
+            }
+
+            if (newEntities.isEmpty()) {
+                log.info("추가할 새로운 단어가 없습니다. (중복 제외됨: {}개)", count);
+                return;
             }
 
             int batchSize = 500;
-            int totalSize = allEntities.size();
-            
+            int totalSize = newEntities.size();
+
             for (int i = 0; i < totalSize; i += batchSize) {
                 int end = Math.min(i + batchSize, totalSize);
-                List<Word> batchList = allEntities.subList(i, end);
-                
+                List<Word> batchList = newEntities.subList(i, end);
+
                 wordRepository.saveAll(batchList);
                 wordRepository.flush();
-                
+
                 log.info("데이터 저장 진행 중: {} / {}", end, totalSize);
             }
-            // --------------------------------------
-            
+
             log.info("총 {}개의 단어 저장 완료!", totalSize);
         }
     }
-    
+
     private Word mapToEntity(WordCsvDto dto) {
         String reading = dto.getReading();
+        String level = dto.getLevel();
 
         return Word.builder()
                 .word(dto.getWord())
                 .reading(reading)
                 .meaning(dto.getMeaning())
-                .level(JlptLevel.valueOf(dto.getLevel()))
+                .level(JlptLevel.valueOf(level))
                 .build();
     }
 }
