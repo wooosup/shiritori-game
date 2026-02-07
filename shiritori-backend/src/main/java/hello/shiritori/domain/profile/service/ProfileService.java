@@ -5,6 +5,8 @@ import hello.shiritori.domain.profile.entity.Profile;
 import hello.shiritori.global.exception.UserException;
 import hello.shiritori.global.exception.UserNotFound;
 import hello.shiritori.domain.profile.repository.ProfileRepository;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,10 +36,26 @@ public class ProfileService {
         Profile profile = repository.findById(userId)
                 .orElseThrow(UserNotFound::new);
 
+        validateCoolTime(profile);
         validateDuplicateNickname(profile, nickname);
 
         profile.update(nickname);
         repository.save(profile);
+    }
+
+    private void validateCoolTime(Profile profile) {
+        if (profile.getNickname() == null) {
+            return;
+        }
+
+        if (profile.getNicknameUpdatedAt() != null) {
+            long days = ChronoUnit.DAYS.between(profile.getNicknameUpdatedAt(), LocalDateTime.now());
+
+            if (days < 7) {
+                long remainingDays = 7 - days;
+                throw new UserException("닉네임은 7일에 한 번만 변경할 수 있습니다. (" + remainingDays + "일 남음)");
+            }
+        }
     }
 
     private void validateDuplicateNickname(Profile profile, String nickname) {
