@@ -56,7 +56,10 @@ export default function SearchModal({ isOpen, onClose }: Props) {
                             : 'border-gray-300 focus:ring-indigo-500'
                         }`}
                     />
-                    <button type="submit" className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 transition">
+                    <button
+                        type="submit"
+                        className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700 transition whitespace-nowrap shrink-0"
+                    >
                         검색
                     </button>
                 </form>

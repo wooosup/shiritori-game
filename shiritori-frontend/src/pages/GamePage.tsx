@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/axios';
 import { JapaneseUtils } from '../utils/japanese';
-import { ShieldCheckIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
+import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
 
-// ✅ 백엔드 응답 타입
 interface TurnResponse {
     status: 'PLAYING' | 'WIN' | 'GAME_OVER';
     userWord: string | null;
@@ -51,6 +50,9 @@ export default function GamePage() {
     const [combo, setCombo] = useState(0);
     const [shake, setShake] = useState(false);
 
+    const [toast, setToast] = useState<{show: boolean, msg: string, type: 'success' | 'error'}>({
+        show: false, msg: '', type: 'success'
+    });
     // Refs
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
@@ -126,6 +128,27 @@ export default function GamePage() {
             return () => clearTimeout(timer);
         }
     }, [errorMessage]);
+
+    const handleSaveWord = async (word: string) => {
+        try {
+            const res = await apiClient.post('/wordBooks', { word });
+            if (res.data.code === 200) {
+                showToast("단어장에 저장했습니다.", 'success');
+            }
+        } catch (error: any) {
+            const msg = error.response?.data?.message || "저장에 실패했습니다.";
+            if (msg.includes("이미")) {
+                showToast("이미 단어장에 있는 단어입니다.", 'error');
+            } else {
+                showToast(msg, 'error');
+            }
+        }
+    };
+
+    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+        setToast({ show: true, msg, type });
+        setTimeout(() => setToast({ show: false, msg: '', type: 'success' }), 2000);
+    };
 
     const startGame = async () => {
         try {
@@ -318,9 +341,24 @@ export default function GamePage() {
                 .animate-bounceIn { animation: bounceIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+                @keyframes slideDown { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: translateY(0); } }
+                .animate-slideDown { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
             `}</style>
 
             <div ref={viewportRef} className="fixed top-0 left-0 w-full max-w-md mx-auto bg-white shadow-2xl flex flex-col relative border-x border-gray-200" style={{ height: '100%' }}>
+
+                {toast.show && (
+                    <div className="absolute top-20 left-0 w-full flex justify-center z-[60] pointer-events-none animate-slideDown">
+                        <div className="bg-zinc-800/95 text-white px-5 py-3 rounded-full shadow-xl flex items-center gap-3 backdrop-blur-md">
+                            {toast.type === 'success' ? (
+                                <CheckCircleIcon className="w-5 h-5 text-green-400" />
+                            ) : (
+                                <ExclamationCircleIcon className="w-5 h-5 text-amber-400" />
+                            )}
+                            <span className="text-sm font-medium tracking-tight">{toast.msg}</span>
+                        </div>
+                    </div>
+                )}
 
                 {/* 1. 헤더 */}
                 <header className="flex-none flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md z-10 sticky top-0 border-b border-gray-50">
@@ -377,15 +415,37 @@ export default function GamePage() {
                 {/* 2. 채팅 영역 */}
                 <main onClick={handleChatClick} className="flex-1 px-5 py-6 overflow-y-auto bg-slate-50 space-y-6" style={{ overscrollBehavior: 'contain' }}>
                     {history.map((msg, i) => {
+                        const isAi = msg.sender === 'AI';
+
                         return (
-                            <div key={i} className={`flex w-full ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`flex flex-col max-w-[75%] ${msg.sender === 'USER' ? 'items-end' : 'items-start'}`}>
+                            <div key={i} className={`flex w-full ${!isAi ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`flex flex-col max-w-[75%] ${!isAi ? 'items-end' : 'items-start'}`}>
                                     {msg.message && <div className="text-[10px] font-bold text-indigo-400 mb-1 pl-1">{msg.message}</div>}
-                                    <div className={`relative px-6 py-4 shadow-sm font-jp transition-all duration-300 hover:scale-[1.02] ${msg.sender === 'USER' ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-[24px] rounded-tr-sm' : 'bg-white text-slate-700 border border-gray-100 rounded-[24px] rounded-tl-sm'}`}>
-                                        {msg.reading && msg.word !== msg.reading && <div className={`text-[11px] font-medium mb-1 tracking-wide ${msg.sender === 'USER' ? 'text-indigo-100 opacity-90' : 'text-indigo-500'}`}>{msg.reading}</div>}
+
+                                    <div
+                                        onClick={() => isAi && msg.word ? handleSaveWord(msg.word) : null}
+                                        className={`
+                                            relative px-6 py-4 shadow-sm font-jp transition-all duration-300 
+                                            ${isAi
+                                            ? 'bg-white text-slate-700 border border-gray-100 rounded-[24px] rounded-tl-sm cursor-pointer group hover:bg-indigo-50 hover:border-indigo-200 hover:shadow-md active:scale-95'
+                                            : 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-[24px] rounded-tr-sm hover:scale-[1.02]'
+                                        }
+                                        `}
+                                        title={isAi ? "클릭해서 단어장에 저장하세요!" : ""}
+                                    >
+                                        {/* AI 말풍선 호버 시 북마크 아이콘 표시 */}
+                                        {isAi && (
+                                            <div className="absolute -top-2 -right-2 bg-amber-400 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm scale-75 animate-bounce">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                                                    <path fillRule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clipRule="evenodd" />
+                                                </svg>
+                                            </div>
+                                        )}
+
+                                        {msg.reading && msg.word !== msg.reading && <div className={`text-[11px] font-medium mb-1 tracking-wide ${isAi ? 'text-indigo-500' : 'text-indigo-100 opacity-90'}`}>{msg.reading}</div>}
                                         <div className="text-xl font-black tracking-wider leading-none">{msg.word}</div>
                                     </div>
-                                    {msg.meaning && <span className={`text-[11px] font-bold text-gray-400 mt-2 px-2 ${msg.sender === 'USER' ? 'text-right' : 'text-left'}`}>{msg.meaning}</span>}
+                                    {msg.meaning && <span className={`text-[11px] font-bold text-gray-400 mt-2 px-2 ${isAi ? 'text-left' : 'text-right'}`}>{msg.meaning}</span>}
                                 </div>
                             </div>
                         );

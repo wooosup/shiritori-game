@@ -4,6 +4,7 @@ import {supabase, apiClient} from '../api/axios';
 import NicknameModal from '../components/NicknameModal';
 import RuleModal from "../components/RuleModal.tsx";
 import SearchModal from '../components/SearchModal';
+import WordBookModal from "../components/WordBookModal.tsx";
 
 interface ApiResponse<T> {
     code: number;
@@ -32,6 +33,7 @@ export default function Home() {
     const [totalWords, setTotalWords] = useState<number>(0);
     const [bannerWords, setBannerWords] = useState<any[]>([]);
     const [showSearchModal, setShowSearchModal] = useState(false);
+    const [showWordBook, setShowWordBook] = useState(false);
 
     // 로딩 상태
     const [loading, setLoading] = useState(true);
@@ -156,6 +158,11 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center relative pb-12">
 
+            <WordBookModal
+                isOpen={showWordBook}
+                onClose={() => setShowWordBook(false)}
+            />
+
             <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
 
             {user && (
@@ -180,9 +187,21 @@ export default function Home() {
             <header className="w-full flex justify-end p-4 bg-white shadow-sm absolute top-0 z-10">
                 {user ? (
                     <div className="flex items-center gap-4">
+
+                        <button
+                            onClick={() => setShowWordBook(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition shadow-sm"
+                        >
+                            <span>📒</span>
+                            <span className="hidden sm:inline">단어장</span>
+                        </button>
+
+                        <div className="h-4 w-px bg-gray-300 hidden sm:block"></div>
+
                         <span className="text-gray-700 font-bold">
                             {nickname ? `${nickname}님` : '닉네임 설정 중...'}
                         </span>
+
                         <button onClick={handleLogout}
                                 className="px-4 py-2 text-sm text-red-500 border border-red-500 rounded-lg hover:bg-red-50 transition">
                             로그아웃

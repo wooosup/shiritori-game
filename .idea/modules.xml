@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Shiriitori-Game.iml" filepath="$PROJECT_DIR$/.idea/Shiriitori-Game.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/shiritori.main.iml" filepath="$PROJECT_DIR$/.idea/modules/shiritori.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/shiritori.test.iml" filepath="$PROJECT_DIR$/.idea/modules/shiritori.test.iml" />
     </modules>
   </component>
 </project>

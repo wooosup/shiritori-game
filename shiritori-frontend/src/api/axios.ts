@@ -32,8 +32,8 @@ apiClient.interceptors.response.use(
             console.warn("세션 만료 또는 타임아웃! 강제 로그아웃 진행합니다.");
             await supabase.auth.signOut();
             localStorage.clear();
-            window.location.href = '/';
+            globalThis.location.href = '/';
         }
-        return Promise.reject(error);
+        throw error;
     }
 );
