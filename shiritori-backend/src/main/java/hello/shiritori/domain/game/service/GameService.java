@@ -66,7 +66,7 @@ public class GameService {
                 .orElseThrow(() -> new WordException("시작 단어를 찾을 수 없습니다."));
 
         saveTurn(game, SPEAKER_AI, startWord.getWord());
-        return GameStartResponse.of(game.getId(), startWord.getWord(), startWord.getReading());
+        return GameStartResponse.of(game.getId(), startWord.getWord(), startWord.getReading(), startWord.getMeaning());
     }
 
     public TurnResponse playTurn(Long gameId, TurnRequest request) {

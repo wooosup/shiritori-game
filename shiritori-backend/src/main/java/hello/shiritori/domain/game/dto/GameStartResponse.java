@@ -11,22 +11,22 @@ public class GameStartResponse {
     private final Long id;
     private final String word;
     private final String startReading;
-    private final String message;
+    private final String meaning;
 
     @Builder
-    private GameStartResponse(Long id, String word, String startReading, String message) {
+    private GameStartResponse(Long id, String word, String startReading, String meaning) {
         this.id = id;
         this.word = word;
         this.startReading = startReading;
-        this.message = message;
+        this.meaning = meaning;
     }
 
-    public static GameStartResponse of(Long id, String word, String reading) {
+    public static GameStartResponse of(Long id, String word, String reading, String meaning) {
         return GameStartResponse.builder()
                 .id(id)
                 .word(word)
                 .startReading(reading)
-                .message("게임이 시작되었습니다! 첫 단어는" + word + "입니다.")
+                .meaning(meaning)
                 .build();
     }
 
