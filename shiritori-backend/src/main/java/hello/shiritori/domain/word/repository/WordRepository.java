@@ -17,10 +17,10 @@ public interface WordRepository extends JpaRepository<Word, Long> {
     Optional<Word> findTopByReadingOrderByLevelDesc(String reading);
 
     @Query(value = """
-            select * from game_words 
-            where level = :level
-            and reading not like '%ん'
-            and reading not like '%ン'
+            select w.* from game_words w
+            where w.level = :level
+            and w.reading not like '%ん'
+            and w.reading not like '%ン'
             order by random()
             limit 1
             """, nativeQuery = true)

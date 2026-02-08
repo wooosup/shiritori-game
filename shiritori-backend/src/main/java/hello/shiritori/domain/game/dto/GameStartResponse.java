@@ -1,11 +1,13 @@
 package hello.shiritori.domain.game.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
 public class GameStartResponse {
 
+    @JsonProperty("gameId")
     private final Long id;
     private final String word;
     private final String startReading;
