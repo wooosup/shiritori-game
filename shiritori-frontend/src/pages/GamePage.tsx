@@ -165,7 +165,7 @@ export default function GamePage() {
                     sender: 'AI',
                     word: data.word,
                     reading: data.startReading,
-                    meaning: '끝말잇기',
+                    meaning: data.meaning,
                 });
             }
         } catch (error) {
