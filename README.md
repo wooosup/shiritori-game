@@ -5,7 +5,7 @@ Spring Boot와 React를 활용한 일본판 끝말잇기 게임입니다.
 ## 📷 Preview
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/c90a244a-8a84-470c-a5bb-e8f3f4335099" width="80%" controls autoplay loop muted></video>
+  <video src="https://github.com/user-attachments/assets/af2edf50-b86a-4fd1-9e9b-492466ba823b" width="80%" controls autoplay loop muted></video>
 </div>
 
 ## 🚀 Getting Started
