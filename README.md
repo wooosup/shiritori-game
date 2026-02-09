@@ -1,6 +1,6 @@
 # 🎮 Shiritori
 
-Spring Boot와 React를 활용한 일본판 끝말잇기 게임입니다.
+Spring Boot와 React를 활용한 일본어 끝말잇기 게임입니다.
 
 ## 📷 Preview
 
@@ -11,17 +11,6 @@ Spring Boot와 React를 활용한 일본판 끝말잇기 게임입니다.
 ## 🚀 Getting Started
 
 - [게임 하러가기](https://shiritori-game-gold.vercel.app/)
-
-## 🔥 Key Features
-
-- **끝말잇기 로직**
-    - 히라가나/가타카나 변환 및 장음 처리
-    - `ん`으로 끝나는 단어 패배 처리
-- **보안**
-    - **Spring Security + JWT + OAuth2**를 활용한 무상태(Stateless) 인증
-    - **Rate Limiting**: 비정상적인 광클 및 매크로 공격 차단
-- **데이터 동기화 자동화**
-    - PostgreSQL **Trigger & Function**을 활용한 Auth 유저와 게임 프로필 간 실시간 동기화
 
 ## 🛠 Stack
 
@@ -37,10 +26,10 @@ Spring Boot와 React를 활용한 일본판 끝말잇기 게임입니다.
 ## 🗄️ ERD
 
 <div align="center">
-    <img src="shiritori-backend/src/main/resources/static/db_erd.png" width="400">
+    <img src="shiritori-backend/src/main/resources/static/erd.png" width="500">
 </div>
 
-## 💣 Technical Challenges & Solutions
+## 💣 Troubleshooting
 
 ### 1. 무료 클라우드 환경의 연결 불안정 해결
 
