@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -18,12 +19,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Profile {
 
+    private static final int NICKNAME_CHANGE_COOLDOWN_DAYS = 7;
+    private static final int MAX_NICKNAME_LENGTH = 10;
+
     @Id
     private UUID id;
 
     @Column(nullable = true, length = 20, unique = true)
     private String nickname;
-
 
     @Column(name = "nickname_updated_at")
     private LocalDateTime nicknameUpdatedAt;
@@ -40,18 +43,50 @@ public class Profile {
                 .build();
     }
 
-    public void update(String nickname) {
-        validate(nickname);
-        this.nickname = nickname;
+    public void updateNickname(String newNickname) {
+        validateNicknameFormat(newNickname);
+        validateNicknameCooldown();
+
+        this.nickname = newNickname;
         this.nicknameUpdatedAt = LocalDateTime.now();
     }
 
-    private void validate(String nickname) {
+    public boolean hasNickname() {
+        return nickname == null || nickname.trim().isEmpty();
+    }
+
+    public boolean isSameNickname(String otherNickname) {
+        return nickname != null && nickname.equals(otherNickname);
+    }
+
+    public long getRemainingCooldownDays() {
+        if (hasNickname() || nicknameUpdatedAt == null) {
+            return 0;
+        }
+
+        long daysSinceUpdate = ChronoUnit.DAYS.between(nicknameUpdatedAt, LocalDateTime.now());
+        long remainingDays = NICKNAME_CHANGE_COOLDOWN_DAYS - daysSinceUpdate;
+
+        return Math.max(0, remainingDays);
+    }
+
+    private void validateNicknameFormat(String nickname) {
         if (nickname == null || nickname.trim().isEmpty()) {
             throw new UserException("닉네임을 입력해주세요.");
         }
-        if (nickname.length() > 10) {
-            throw new UserException("닉네임은 최대 10자까지 가능합니다.");
+        if (nickname.length() > MAX_NICKNAME_LENGTH) {
+            throw new UserException("닉네임은 최대 " + MAX_NICKNAME_LENGTH + "자까지 가능합니다.");
+        }
+    }
+
+    private void validateNicknameCooldown() {
+        if (hasNickname()) {
+            return;
+        }
+
+        long remainingDays = getRemainingCooldownDays();
+        if (remainingDays > 0) {
+            throw new UserException("닉네임은 7일에 한 번만 변경할 수 있습니다. (" + remainingDays + "일 남음)");
         }
     }
 
