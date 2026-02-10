@@ -5,6 +5,7 @@ import NicknameModal from '../components/NicknameModal';
 import RuleModal from "../components/RuleModal.tsx";
 import SearchModal from '../components/SearchModal';
 import WordBookModal from "../components/WordBookModal.tsx";
+import QuizModal from "../components/QuizModal.tsx";
 
 interface ApiResponse<T> {
     code: number;
@@ -34,6 +35,7 @@ export default function Home() {
     const [bannerWords, setBannerWords] = useState<any[]>([]);
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [showWordBook, setShowWordBook] = useState(false);
+    const [showQuizModal, setShowQuizModal] = useState(false);
 
     // 로딩 상태
     const [loading, setLoading] = useState(true);
@@ -116,7 +118,6 @@ export default function Home() {
                     .catch(() => {
                     });
             }
-            // 🚨 SIGNED_OUT 일 때는 상태 변경 하지 않음 (handleLogout에서 페이지를 새로고침 하므로)
         });
 
         return () => {
@@ -158,12 +159,9 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center relative pb-12">
 
-            <WordBookModal
-                isOpen={showWordBook}
-                onClose={() => setShowWordBook(false)}
-            />
-
-            <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
+            <WordBookModal isOpen={showWordBook} onClose={() => setShowWordBook(false)}/>
+            <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)}/>
+            <QuizModal isOpen={showQuizModal} onClose={() => setShowQuizModal(false)}/>
 
             {user && (
                 <NicknameModal
@@ -193,6 +191,13 @@ export default function Home() {
             <header className="w-full flex justify-end p-4 bg-white shadow-sm absolute top-0 z-10">
                 {user ? (
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setShowQuizModal(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition shadow-sm"
+                        >
+                            <span>📝</span>
+                            <span className="hidden sm:inline">퀴즈</span>
+                        </button>
 
                         <button
                             onClick={() => setShowWordBook(true)}
@@ -201,6 +206,7 @@ export default function Home() {
                             <span>📒</span>
                             <span className="hidden sm:inline">단어장</span>
                         </button>
+
 
                         <div className="h-4 w-px bg-gray-300 hidden sm:block"></div>
 
@@ -233,7 +239,8 @@ export default function Home() {
                 </h1>
 
                 <div className="flex items-center gap-3 mb-8">
-                    <div className="bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-600 border border-gray-100">
+                    <div
+                        className="bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-600 border border-gray-100">
                         📚 등록된 단어: <span className="text-indigo-600">{totalWords.toLocaleString()}</span>개
                     </div>
                     <button
@@ -246,7 +253,8 @@ export default function Home() {
                 </div>
 
                 {/* 👇 게임 컨트롤 박스 */}
-                <div className="flex flex-col items-center p-8 space-y-6 bg-white rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
+                <div
+                    className="flex flex-col items-center p-8 space-y-6 bg-white rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
 
                     <div className="w-full">
                         {/* ✅ 라벨과 버튼을 한 줄에 배치 (Flexbox) */}
@@ -257,8 +265,10 @@ export default function Home() {
                                 onClick={() => setShowRuleModal(true)}
                                 className="text-xs sm:text-sm font-medium text-gray-400 hover:text-indigo-600 transition-colors flex items-center gap-1"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2}
+                                     stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round"
+                                          d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
                                 </svg>
                                 게임 규칙
                             </button>
@@ -327,7 +337,8 @@ export default function Home() {
                     </div>
                 </div>
             </main>
-            <div className="fixed bottom-0 w-full bg-indigo-900 text-white h-10 flex items-center overflow-hidden z-20 shadow-lg">
+            <div
+                className="fixed bottom-0 w-full bg-indigo-900 text-white h-10 flex items-center overflow-hidden z-20 shadow-lg">
                 <div className="w-full overflow-hidden">
                     <div className="animate-ticker pl-[100%]">
                         {bannerWords.map((word, idx) => (
