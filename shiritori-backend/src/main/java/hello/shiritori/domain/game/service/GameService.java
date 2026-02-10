@@ -54,24 +54,25 @@ public class GameService {
     private final ShiritoriValidator shiritoriValidator;
 
     public GameStartResponse start(UUID userId, GameStartRequest request) {
-        Profile profile = profileRepository.findById(userId)
-                .orElseThrow(UserNotFound::new);
-
+        Profile profile = findProfileOrThrow(userId);
         validateLevel(request.getLevel());
 
-        Game game = Game.create(profile, request.getLevel());
-        gameRepository.save(game);
-
-        Word startWord = wordRepository.findRandomStartWord(game.getLevel().name())
-                .orElseThrow(() -> new WordException("시작 단어를 찾을 수 없습니다."));
+        Game game = createAndSaveGame(profile, request.getLevel());
+        Word startWord = findStartWord(game.getLevel());
 
         saveTurn(game, SPEAKER_AI, startWord.getWord());
-        return GameStartResponse.of(game.getId(), startWord.getWord(), startWord.getReading(), startWord.getMeaning());
+
+        return GameStartResponse.of(
+                game.getId(),
+                startWord.getWord(),
+                startWord.getReading(),
+                startWord.getMeaning()
+        );
     }
 
     public TurnResponse playTurn(Long gameId, TurnRequest request) {
         Game game = findGameOrThrow(gameId);
-        validateGameStatus(game.getStatus());
+        validateGameIsPlaying(game);
 
         String userInput = request.getWord().trim();
 
@@ -84,8 +85,7 @@ public class GameService {
         }
 
         Word userWord = wordFinder.findOrThrow(userInput);
-
-        validateMove(game, userWord);
+        validateUserMove(game, userWord);
 
         saveTurn(game, SPEAKER_USER, userWord.getWord());
         game.applyCorrectAnswer(userWord.getLevel());
@@ -99,16 +99,13 @@ public class GameService {
 
     public TurnResponse passTurn(Long gameId) {
         Game game = findGameOrThrow(gameId);
-
-        validateGameStatus(game.getStatus());
-        validatePassCount(game.getPassCount());
+        validateGameIsPlaying(game);
+        validateHasPassCount(game);
 
         game.decreasePassCount();
 
         Word lastWord = getLastWord(game);
-
-        Word nextWord = findNextAiWord(game, lastWord)
-                .orElseThrow(() -> new WordException("AI도 이을 단어를 못 찾았습니다. (무승부?)"));
+        Word nextWord = findNextAiWordOrThrow(game, lastWord);
 
         saveTurn(game, SPEAKER_AI, nextWord.getWord());
         game.updateLastTurnTime();
@@ -124,19 +121,42 @@ public class GameService {
         }
     }
 
+    private Profile findProfileOrThrow(UUID userId) {
+        return profileRepository.findById(userId)
+                .orElseThrow(UserNotFound::new);
+    }
+
     private Game findGameOrThrow(Long gameId) {
         return gameRepository.findById(gameId)
                 .orElseThrow(GameNotFound::new);
     }
 
-    private boolean isTimeOver(Game game, String input) {
-        return SIGNAL_TIME_OVER.equals(input) || game.isTimeOut(TIME_LIMIT_SECONDS);
+    private Game createAndSaveGame(Profile profile, JlptLevel level) {
+        Game game = Game.create(profile, level);
+        return gameRepository.save(game);
     }
 
-    private void validateMove(Game game, Word userWord) {
-        Word lastWord = getLastWord(game);
-        shiritoriValidator.validateConnection(lastWord, userWord);
-        validateDuplicateWord(game, userWord);
+    private void validateGameIsPlaying(Game game) {
+        if (game.getStatus() != PLAYING) {
+            throw new GameAlreadyException();
+        }
+    }
+
+    private void validateLevel(JlptLevel level) {
+        if (level == null) {
+            throw new GameLevelException();
+        }
+    }
+
+    private void validateHasPassCount(Game game) {
+        if (game.getPassCount() <= 0) {
+            throw new GameException("PASS 기회를 모두 소진했습니다!");
+        }
+    }
+
+    private Word findStartWord(JlptLevel level) {
+        return wordRepository.findRandomStartWord(level.name())
+                .orElseThrow(() -> new WordException("시작 단어를 찾을 수 없습니다."));
     }
 
     private Word getLastWord(Game game) {
@@ -158,54 +178,44 @@ public class GameService {
         );
     }
 
-    private TurnResponse processAiTurn(Game game, Word userWord) {
-        String startChar = userWord.getEffectiveEndChar();
-
-        Optional<Word> word = wordRepository.findAiWord(
-                game.getId(),
-                JapaneseUtils.toHiragana(startChar),
-                JapaneseUtils.toKatakana(startChar),
-                game.getLevel().name()
-        );
-
-        if (word.isEmpty()) {
-            return winAndFinishGame(game, userWord.getWord());
-        }
-
-        Word aiWord = word.get();
-        saveTurn(game, "AI", aiWord.getWord());
-        game.updateLastTurnTime();
-
-        return TurnResponse.ofSuccess(game, userWord, aiWord);
+    private Word findNextAiWordOrThrow(Game game, Word lastWord) {
+        return findNextAiWord(game, lastWord)
+                .orElseThrow(() -> new WordException("AI도 이을 단어를 못 찾았습니다. (무승부?)"));
     }
 
-    private void validatePassCount(int passCount) {
-        if (passCount <= 0) {
-            throw new GameException("PASS 기회를 모두 소진했습니다!");
-        }
+    private boolean isTimeOver(Game game, String input) {
+        return SIGNAL_TIME_OVER.equals(input) || game.isTimeOut(TIME_LIMIT_SECONDS);
     }
 
-    private void validateDuplicateWord(Game game, Word word) {
+    private void validateUserMove(Game game, Word userWord) {
+        Word lastWord = getLastWord(game);
+        shiritoriValidator.validateConnection(lastWord, userWord);
+        validateNotDuplicateWord(game, userWord);
+    }
+
+    private void validateNotDuplicateWord(Game game, Word word) {
         if (gameTurnRepository.existsByGameAndWordText(game, word.getWord())) {
             throw new DuplicateWordException("이미 사용된 단어 입니다!");
         }
     }
 
-    private void validateGameStatus(GameStatus status) {
-        if (status != PLAYING) {
-            throw new GameAlreadyException();
+    private TurnResponse processAiTurn(Game game, Word userWord) {
+        Optional<Word> aiWordOptional = findNextAiWord(game, userWord);
+
+        if (aiWordOptional.isEmpty()) {
+            return winAndFinishGame(game, userWord);
         }
+
+        Word aiWord = aiWordOptional.get();
+        saveTurn(game, SPEAKER_AI, aiWord.getWord());
+        game.updateLastTurnTime();
+
+        return TurnResponse.ofSuccess(game, userWord, aiWord);
     }
 
-    private void validateLevel(JlptLevel level) {
-        if (level == null) {
-            throw new GameLevelException();
-        }
-    }
-
-    private TurnResponse winAndFinishGame(Game game, String word) {
+    private TurnResponse winAndFinishGame(Game game, Word userWord) {
         game.finish(WIN);
-        return TurnResponse.ofUserWin(game, wordFinder.findOrThrow(word));
+        return TurnResponse.ofUserWin(game, userWord);
     }
 
     private TurnResponse loseAndFinishGame(Game game, GameStatus status, String word, String message) {
@@ -214,8 +224,13 @@ public class GameService {
     }
 
     private void saveTurn(Game game, String speaker, String wordText) {
-        int nextTurnNum = (int) gameTurnRepository.countByGame(game) + 1;
-        gameTurnRepository.save(GameTurn.of(game, nextTurnNum, speaker, wordText));
+        int nextTurnNum = calculateNextTurnNumber(game);
+        GameTurn gameTurn = GameTurn.of(game, nextTurnNum, speaker, wordText);
+        gameTurnRepository.save(gameTurn);
+    }
+
+    private int calculateNextTurnNumber(Game game) {
+        return (int) gameTurnRepository.countByGame(game) + 1;
     }
 
 }
