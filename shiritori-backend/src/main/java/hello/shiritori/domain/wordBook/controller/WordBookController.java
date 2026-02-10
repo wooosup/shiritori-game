@@ -1,6 +1,7 @@
 package hello.shiritori.domain.wordBook.controller;
 
 import hello.shiritori.domain.wordBook.dto.AddWordRequest;
+import hello.shiritori.domain.wordBook.dto.QuizResponse;
 import hello.shiritori.domain.wordBook.dto.WordBookResponse;
 import hello.shiritori.domain.wordBook.service.WordBookService;
 import hello.shiritori.global.api.ApiResponse;
@@ -37,6 +38,13 @@ public class WordBookController {
         UUID userId = UUID.fromString(jwt.getSubject());
         List<WordBookResponse> list = wordBookService.getWordBook(userId);
         return ApiResponse.ok(list);
+    }
+
+    @GetMapping("/quiz")
+    public ApiResponse<List<QuizResponse>> getQuiz(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        List<QuizResponse> quiz = wordBookService.quiz(userId);
+        return ApiResponse.ok(quiz);
     }
 
     @DeleteMapping("/{wordBookId}")

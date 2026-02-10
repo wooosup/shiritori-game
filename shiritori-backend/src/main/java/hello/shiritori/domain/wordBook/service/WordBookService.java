@@ -4,7 +4,9 @@ import hello.shiritori.domain.profile.entity.Profile;
 import hello.shiritori.domain.profile.repository.ProfileRepository;
 import hello.shiritori.domain.word.entity.Word;
 import hello.shiritori.domain.word.repository.WordRepository;
+import hello.shiritori.domain.wordBook.dto.QuizResponse;
 import hello.shiritori.domain.wordBook.dto.WordBookResponse;
+import hello.shiritori.domain.wordBook.entity.QuizType;
 import hello.shiritori.domain.wordBook.entity.WordBook;
 import hello.shiritori.domain.wordBook.repository.WordBookRepository;
 import hello.shiritori.global.exception.DuplicateWordException;
@@ -27,36 +29,82 @@ public class WordBookService {
     private final WordRepository wordRepository;
 
     public WordBookResponse save(UUID userId, String wordText) {
-        Profile profile = profileRepository.findById(userId)
-                .orElseThrow(UserNotFound::new);
-
-        Word word = wordRepository.findByWord(wordText)
-                .orElseThrow(WordNotFound::new);
-
-        if (wordBookRepository.existsByProfileAndWord(profile, word)) {
-            throw new DuplicateWordException("이미 단어장에 등록된 단어입니다.");
-        }
+        Profile profile = findProfileOrThrow(userId);
+        Word word = findWordOrThrow(wordText);
+        validateNotDuplicate(profile, word);
 
         WordBook wordBook = WordBook.create(profile, word);
-        return WordBookResponse.of(wordBookRepository.save(wordBook));
+        WordBook savedWordBook = wordBookRepository.save(wordBook);
+
+        return WordBookResponse.of(savedWordBook);
     }
 
     @Transactional(readOnly = true)
     public List<WordBookResponse> getWordBook(UUID userId) {
-        return wordBookRepository.findAllByUserId(userId).stream()
-                .map(WordBookResponse::of)
+        List<WordBook> wordBooks = wordBookRepository.findAllByUserId(userId);
+        return convertToWordBookResponses(wordBooks);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizResponse> quiz(UUID userId) {
+        List<WordBook> myWords = wordBookRepository.findTop10ByProfileIdOrderByCreatedAtDesc(userId);
+        validateWordBookNotEmpty(myWords);
+
+        return myWords.stream()
+                .map(this::generateRandomQuiz)
                 .toList();
     }
 
     public void delete(UUID userId, Long wordBookId) {
-        WordBook wordBook = wordBookRepository.findById(wordBookId)
-                .orElseThrow(WordNotFound::new);
-
-        if (wordBook.notValidateOf(userId)) {
-            throw new WordBookException("삭제 권한이 없습니다.");
-        }
+        WordBook wordBook = findWordBookOrThrow(wordBookId);
+        validateOwnership(wordBook, userId);
 
         wordBookRepository.delete(wordBook);
+    }
+
+    private Profile findProfileOrThrow(UUID userId) {
+        return profileRepository.findById(userId)
+                .orElseThrow(UserNotFound::new);
+    }
+
+    private Word findWordOrThrow(String wordText) {
+        return wordRepository.findByWord(wordText)
+                .orElseThrow(WordNotFound::new);
+    }
+
+    private WordBook findWordBookOrThrow(Long wordBookId) {
+        return wordBookRepository.findById(wordBookId)
+                .orElseThrow(WordNotFound::new);
+    }
+
+    private void validateNotDuplicate(Profile profile, Word word) {
+        if (wordBookRepository.existsByProfileAndWord(profile, word)) {
+            throw new DuplicateWordException("이미 단어장에 등록된 단어입니다.");
+        }
+    }
+
+    private void validateWordBookNotEmpty(List<WordBook> wordBooks) {
+        if (wordBooks.isEmpty()) {
+            throw new WordBookException("단어장이 비어있습니다. 먼저 단어를 저장해주세요.");
+        }
+    }
+
+    private void validateOwnership(WordBook wordBook, UUID userId) {
+        if (wordBook.isNotOwnedBy(userId)) {
+            throw new WordBookException("삭제 권한이 없습니다.");
+        }
+    }
+
+    private List<WordBookResponse> convertToWordBookResponses(List<WordBook> wordBooks) {
+        return wordBooks.stream()
+                .map(WordBookResponse::of)
+                .toList();
+    }
+
+    private QuizResponse generateRandomQuiz(WordBook wordBook) {
+        List<Word> incorrectWords = wordRepository.findRandomWords(3);
+        QuizType randomType = QuizType.random();
+        return QuizResponse.of(wordBook, randomType, incorrectWords);
     }
 
 }

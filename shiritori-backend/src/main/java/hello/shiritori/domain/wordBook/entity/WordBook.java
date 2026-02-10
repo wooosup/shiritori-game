@@ -54,7 +54,7 @@ public class WordBook extends BaseEntity {
                 .build();
     }
 
-    public boolean notValidateOf(UUID userId) {
+    public boolean isNotOwnedBy(UUID userId) {
         return !profile.getId().equals(userId);
     }
 

@@ -15,4 +15,7 @@ public interface WordBookRepository extends JpaRepository<WordBook, Long> {
 
     @Query("select wb from WordBook wb join fetch wb.word where wb.profile.id = :userId order by wb.createdAt desc")
     List<WordBook> findAllByUserId(@Param("userId") UUID userId);
+
+    List<WordBook> findTop10ByProfileIdOrderByCreatedAtDesc(UUID profileId);
+
 }
