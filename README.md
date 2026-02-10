@@ -4,9 +4,16 @@ Spring Boot와 React를 활용한 일본어 끝말잇기 게임입니다.
 
 ## 📷 Preview
 
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/af2edf50-b86a-4fd1-9e9b-492466ba823b" width="80%" controls autoplay loop muted></video>
-</div>
+<table width="100%">
+  <tr>
+    <td align="center" width="50%">
+      <video src="https://github.com/user-attachments/assets/af2edf50-b86a-4fd1-9e9b-492466ba823b" controls autoplay loop muted style="width: 100%;"></video>
+    </td>
+    <td align="center" width="50%">
+      <video src="https://github.com/user-attachments/assets/d60b7064-418d-41dd-b73d-02fca64d3762" controls autoplay loop muted style="width: 100%;"></video>
+    </td>
+  </tr>
+</table>
 
 ## 🚀 Getting Started
 
