@@ -25,11 +25,9 @@ public class ProfileService {
 
     public void updateProfile(UUID userId, String nickname) {
         Profile profile = findProfileOrThrow(userId);
-
-        validateNicknameNotEmpty(nickname);
-        validateNicknameNotDuplicate(profile, nickname);
-
-        profile.updateNickname(nickname.trim());
+        String normalizedNickname = normalizeNickname(nickname);
+        validateNicknameNotDuplicate(profile, normalizedNickname);
+        profile.updateNickname(normalizedNickname);
     }
 
     private Profile findOrCreateProfile(UUID userId) {
@@ -47,10 +45,11 @@ public class ProfileService {
         return profileRepository.save(newProfile);
     }
 
-    private void validateNicknameNotEmpty(String nickname) {
+    private String normalizeNickname(String nickname) {
         if (nickname == null || nickname.trim().isEmpty()) {
             throw new UserException("닉네임을 입력해주세요.");
         }
+        return nickname.trim();
     }
 
     private void validateNicknameNotDuplicate(Profile profile, String nickname) {

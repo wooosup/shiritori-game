@@ -7,8 +7,7 @@ import static hello.shiritori.domain.game.entity.GameStatus.WIN;
 
 import hello.shiritori.domain.gamTurn.dto.TurnRequest;
 import hello.shiritori.domain.gamTurn.dto.TurnResponse;
-import hello.shiritori.domain.gamTurn.entity.GameTurn;
-import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
+import hello.shiritori.domain.gamTurn.service.GameTurnService;
 import hello.shiritori.domain.game.dto.GameStartRequest;
 import hello.shiritori.domain.game.dto.GameStartResponse;
 import hello.shiritori.domain.game.entity.Game;
@@ -46,10 +45,9 @@ public class GameService {
     private static final String SPEAKER_USER = "USER";
 
     private final GameRepository gameRepository;
-    private final GameTurnRepository gameTurnRepository;
+    private final GameTurnService gameTurnService;
     private final WordRepository wordRepository;
     private final ProfileRepository profileRepository;
-
     private final WordFinder wordFinder;
     private final ShiritoriValidator shiritoriValidator;
 
@@ -60,7 +58,7 @@ public class GameService {
         Game game = createAndSaveGame(profile, request.getLevel());
         Word startWord = findStartWord(game.getLevel());
 
-        saveTurn(game, SPEAKER_AI, startWord.getWord());
+        gameTurnService.save(game, SPEAKER_AI, startWord.getWord());
 
         return GameStartResponse.of(
                 game.getId(),
@@ -87,7 +85,7 @@ public class GameService {
         Word userWord = wordFinder.findOrThrow(userInput);
         validateUserMove(game, userWord);
 
-        saveTurn(game, SPEAKER_USER, userWord.getWord());
+        gameTurnService.save(game, SPEAKER_USER, userWord.getWord());
         game.applyCorrectAnswer(userWord.getLevel());
 
         if (userWord.endsWithN()) {
@@ -104,10 +102,10 @@ public class GameService {
 
         game.decreasePassCount();
 
-        Word lastWord = getLastWord(game);
+        Word lastWord = gameTurnService.getLastWordOrThrow(game);
         Word nextWord = findNextAiWordOrThrow(game, lastWord);
 
-        saveTurn(game, SPEAKER_AI, nextWord.getWord());
+        gameTurnService.save(game, SPEAKER_AI, nextWord.getWord());
         game.updateLastTurnTime();
 
         return TurnResponse.ofPass(game, nextWord);
@@ -159,14 +157,6 @@ public class GameService {
                 .orElseThrow(() -> new WordException("시작 단어를 찾을 수 없습니다."));
     }
 
-    private Word getLastWord(Game game) {
-        String lastWordText = gameTurnRepository.findFirstByGameOrderByCreatedAtDesc(game)
-                .map(GameTurn::getWordText)
-                .orElseThrow(() -> new WordException("이전 단어 정보를 찾을 수 없습니다."));
-
-        return wordFinder.findOrThrow(lastWordText);
-    }
-
     private Optional<Word> findNextAiWord(Game game, Word word) {
         String startChar = word.getEffectiveEndChar();
 
@@ -188,13 +178,13 @@ public class GameService {
     }
 
     private void validateUserMove(Game game, Word userWord) {
-        Word lastWord = getLastWord(game);
+        Word lastWord = gameTurnService.getLastWordOrThrow(game);
         shiritoriValidator.validateConnection(lastWord, userWord);
         validateNotDuplicateWord(game, userWord);
     }
 
     private void validateNotDuplicateWord(Game game, Word word) {
-        if (gameTurnRepository.existsByGameAndWordText(game, word.getWord())) {
+        if (gameTurnService.isWordAlreadyUsed(game, word.getWord())) {
             throw new DuplicateWordException("이미 사용된 단어 입니다!");
         }
     }
@@ -207,7 +197,7 @@ public class GameService {
         }
 
         Word aiWord = aiWordOptional.get();
-        saveTurn(game, SPEAKER_AI, aiWord.getWord());
+        gameTurnService.save(game, SPEAKER_AI, aiWord.getWord());
         game.updateLastTurnTime();
 
         return TurnResponse.ofSuccess(game, userWord, aiWord);
@@ -221,16 +211,6 @@ public class GameService {
     private TurnResponse loseAndFinishGame(Game game, GameStatus status, String word, String message) {
         game.finish(status);
         return TurnResponse.ofUserLose(game, word, message);
-    }
-
-    private void saveTurn(Game game, String speaker, String wordText) {
-        int nextTurnNum = calculateNextTurnNumber(game);
-        GameTurn gameTurn = GameTurn.of(game, nextTurnNum, speaker, wordText);
-        gameTurnRepository.save(gameTurn);
-    }
-
-    private int calculateNextTurnNumber(Game game) {
-        return (int) gameTurnRepository.countByGame(game) + 1;
     }
 
 }

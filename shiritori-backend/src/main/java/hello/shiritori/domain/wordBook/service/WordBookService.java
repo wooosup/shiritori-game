@@ -12,6 +12,7 @@ import hello.shiritori.domain.wordBook.repository.WordBookRepository;
 import hello.shiritori.global.exception.DuplicateWordException;
 import hello.shiritori.global.exception.UserNotFound;
 import hello.shiritori.global.exception.WordBookException;
+import hello.shiritori.global.exception.WordBookNotFound;
 import hello.shiritori.global.exception.WordNotFound;
 import java.util.List;
 import java.util.UUID;
@@ -74,7 +75,7 @@ public class WordBookService {
 
     private WordBook findWordBookOrThrow(Long wordBookId) {
         return wordBookRepository.findById(wordBookId)
-                .orElseThrow(WordNotFound::new);
+                .orElseThrow(WordBookNotFound::new);
     }
 
     private void validateNotDuplicate(Profile profile, Word word) {
