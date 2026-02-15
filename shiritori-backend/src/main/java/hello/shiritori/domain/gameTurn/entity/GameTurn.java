@@ -1,4 +1,4 @@
-package hello.shiritori.domain.gamTurn.entity;
+package hello.shiritori.domain.gameTurn.entity;
 
 import hello.shiritori.domain.common.BaseEntity;
 import hello.shiritori.domain.game.entity.Game;

@@ -5,9 +5,9 @@ import static hello.shiritori.domain.game.entity.GameStatus.PLAYING;
 import static hello.shiritori.domain.game.entity.GameStatus.TIME_OVER;
 import static hello.shiritori.domain.game.entity.GameStatus.WIN;
 
-import hello.shiritori.domain.gamTurn.dto.TurnRequest;
-import hello.shiritori.domain.gamTurn.dto.TurnResponse;
-import hello.shiritori.domain.gamTurn.service.GameTurnService;
+import hello.shiritori.domain.gameTurn.dto.TurnRequest;
+import hello.shiritori.domain.gameTurn.dto.TurnResponse;
+import hello.shiritori.domain.gameTurn.service.GameTurnService;
 import hello.shiritori.domain.game.dto.GameStartRequest;
 import hello.shiritori.domain.game.dto.GameStartResponse;
 import hello.shiritori.domain.game.entity.Game;

@@ -1,7 +1,7 @@
-package hello.shiritori.domain.gamTurn.service;
+package hello.shiritori.domain.gameTurn.service;
 
-import hello.shiritori.domain.gamTurn.entity.GameTurn;
-import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
+import hello.shiritori.domain.gameTurn.entity.GameTurn;
+import hello.shiritori.domain.gameTurn.repository.GameTurnRepository;
 import hello.shiritori.domain.game.entity.Game;
 import hello.shiritori.domain.word.entity.Word;
 import hello.shiritori.global.exception.WordException;

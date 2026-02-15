@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/axios';
-import { JapaneseUtils } from '../utils/japanese';
+import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
 import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
 
 interface TurnResponse {
@@ -58,6 +58,7 @@ export default function GamePage() {
     const viewportRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const isGameStarted = useRef(false);
+    const { validateWord } = useShiritoriValidation(history);
 
     // --- 초기화 ---
     useEffect(() => {
@@ -244,53 +245,13 @@ export default function GamePage() {
         if (errorMessage) setErrorMessage(null);
     };
 
-    const checkWordIsValid = (word: string): string | null => {
-        if (history.length === 0) return '⏳ 게임 준비 중...';
-        const gameMessages = history;
-        let cleanInput = word.trim().normalize("NFC");
-        cleanInput = cleanInput.replaceAll(/[\u30a1-\u30f6]/g, (match) => String.fromCodePoint(match.charCodeAt(0) - 0x60));
-
-        const isDuplicate = gameMessages.some((msg) => msg.word?.normalize("NFC") === cleanInput);
-        if (isDuplicate) return '이미 입력한 단어입니다.';
-        const isKanaOnly = /^[ぁ-んァ-ンー]+$/.test(cleanInput);
-        if (!isKanaOnly) return null;
-
-        const lastMessage = gameMessages.at(-1);
-        if (lastMessage?.sender === 'AI' && lastMessage.word) {
-            const targetText = lastMessage.reading || lastMessage.word;
-            const lastChar = targetText.slice(-1);
-            const prevChar = targetText.slice(-2, -1);
-            const firstChar = cleanInput.charAt(0);
-            let isValid = false;
-            let expectedStart = "";
-
-            if (JapaneseUtils.isSmallKana(lastChar) && prevChar) {
-                const combinedSound = prevChar + lastChar;
-                const prevSeion = JapaneseUtils.toSeion(prevChar);
-                const combinedSeion = prevSeion + lastChar;
-                const bigKana = JapaneseUtils.toBigKana(lastChar);
-                const normBig = JapaneseUtils.normalizeForCheck(bigKana);
-                const normFirst = JapaneseUtils.normalizeForCheck(firstChar);
-                if (cleanInput.startsWith(combinedSound) || cleanInput.startsWith(combinedSeion) || normBig === normFirst) isValid = true;
-                else expectedStart = `${bigKana} 또는 ${combinedSeion}`;
-            } else {
-                const normLast = JapaneseUtils.normalizeForCheck(lastChar);
-                const normFirst = JapaneseUtils.normalizeForCheck(firstChar);
-                if (normLast === normFirst) isValid = true;
-                else expectedStart = JapaneseUtils.toBigKana(JapaneseUtils.toSeion(lastChar));
-            }
-            if (!isValid) return `'${expectedStart}'(으)로 시작해야 합니다.`;
-        }
-        return null;
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isGameOver || loading) return;
         if (!inputWord.trim()) return;
 
         const userInput = inputWord.trim();
-        const error = checkWordIsValid(userInput);
+        const error = validateWord(userInput);
         if (error) { setErrorMessage(error); return; }
 
         addMessage({ sender: 'USER', word: userInput, reading: userInput });

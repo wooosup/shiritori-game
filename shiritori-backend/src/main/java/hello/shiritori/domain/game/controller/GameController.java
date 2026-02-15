@@ -2,8 +2,8 @@ package hello.shiritori.domain.game.controller;
 
 import hello.shiritori.domain.game.dto.GameStartRequest;
 import hello.shiritori.domain.game.dto.GameStartResponse;
-import hello.shiritori.domain.gamTurn.dto.TurnRequest;
-import hello.shiritori.domain.gamTurn.dto.TurnResponse;
+import hello.shiritori.domain.gameTurn.dto.TurnRequest;
+import hello.shiritori.domain.gameTurn.dto.TurnResponse;
 import hello.shiritori.global.api.ApiResponse;
 import hello.shiritori.domain.game.service.GameService;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package hello.shiritori.domain.gamTurn.dto;
+package hello.shiritori.domain.gameTurn.dto;
 
 import static hello.shiritori.domain.game.entity.GameStatus.GAME_OVER;
 import static hello.shiritori.domain.game.entity.GameStatus.PLAYING;

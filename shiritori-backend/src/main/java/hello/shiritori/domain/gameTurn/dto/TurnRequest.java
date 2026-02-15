@@ -1,4 +1,4 @@
-package hello.shiritori.domain.gamTurn.dto;
+package hello.shiritori.domain.gameTurn.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

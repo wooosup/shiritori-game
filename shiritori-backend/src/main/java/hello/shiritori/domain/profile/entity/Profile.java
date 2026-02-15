@@ -51,7 +51,7 @@ public class Profile {
         this.nicknameUpdatedAt = LocalDateTime.now();
     }
 
-    public boolean hasNickname() {
+    public boolean hasNoNickname() {
         return nickname == null || nickname.trim().isEmpty();
     }
 
@@ -60,7 +60,7 @@ public class Profile {
     }
 
     public long getRemainingCooldownDays() {
-        if (hasNickname() || nicknameUpdatedAt == null) {
+        if (hasNoNickname() || nicknameUpdatedAt == null) {
             return 0;
         }
 
@@ -80,7 +80,7 @@ public class Profile {
     }
 
     private void validateNicknameCooldown() {
-        if (hasNickname()) {
+        if (hasNoNickname()) {
             return;
         }
 

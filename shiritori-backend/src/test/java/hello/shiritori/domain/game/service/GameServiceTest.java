@@ -2,14 +2,14 @@ package hello.shiritori.domain.game.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import hello.shiritori.domain.gamTurn.dto.TurnRequest;
-import hello.shiritori.domain.gamTurn.dto.TurnResponse;
+import hello.shiritori.domain.gameTurn.dto.TurnRequest;
+import hello.shiritori.domain.gameTurn.dto.TurnResponse;
 import hello.shiritori.domain.game.entity.Game;
-import hello.shiritori.domain.gamTurn.entity.GameTurn;
+import hello.shiritori.domain.gameTurn.entity.GameTurn;
 import hello.shiritori.domain.game.entity.JlptLevel;
 import hello.shiritori.domain.word.entity.Word;
 import hello.shiritori.domain.game.repository.GameRepository;
-import hello.shiritori.domain.gamTurn.repository.GameTurnRepository;
+import hello.shiritori.domain.gameTurn.repository.GameTurnRepository;
 import hello.shiritori.domain.word.repository.WordRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

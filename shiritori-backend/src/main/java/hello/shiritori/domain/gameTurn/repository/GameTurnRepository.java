@@ -1,7 +1,7 @@
-package hello.shiritori.domain.gamTurn.repository;
+package hello.shiritori.domain.gameTurn.repository;
 
 import hello.shiritori.domain.game.entity.Game;
-import hello.shiritori.domain.gamTurn.entity.GameTurn;
+import hello.shiritori.domain.gameTurn.entity.GameTurn;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
