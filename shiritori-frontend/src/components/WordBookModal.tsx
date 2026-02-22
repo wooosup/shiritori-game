@@ -250,7 +250,7 @@ export default function WordBookModal({ isOpen, onClose }: Readonly<Props>) {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="font-bold text-lg text-gray-800">{item.word}</span>
-                                                {item.level && (
+                                                {item.level && item.level !== 'null' && (
                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${getLevelBadgeColor(item.level)}`}>
                                                         {item.level}
                                                     </span>

@@ -85,7 +85,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
                         <div className="text-left w-full animate-fadeIn">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="text-2xl font-black text-indigo-600">{result.word}</span>
-                                {result.level && (
+                                {result.level && result.level !== 'null' && (
                                     <span className={`text-xs px-2 py-1 rounded font-bold ${getLevelBadgeColor(result.level)}`}>
                                         {result.level}
                                     </span>
