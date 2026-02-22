@@ -18,7 +18,7 @@ public interface WordRepository extends JpaRepository<Word, Long> {
 
     @Query(value = """
             select w.* from game_words w
-            where w.level = :level
+            where (:level is null or w.level = :level or w.level is null)
             and w.reading not like '%ん'
             and w.reading not like '%ン'
             order by random()
@@ -29,7 +29,7 @@ public interface WordRepository extends JpaRepository<Word, Long> {
     @Query(value = """
             SELECT w.* FROM game_words w
             WHERE (w.starts_with = :hira OR w.starts_with = :kata)
-              AND w.level = :level
+              AND (:level IS NULL OR w.level = :level OR w.level IS NULL)
               AND w.word NOT IN (
                   SELECT gt.word_text
                   FROM game_turns gt

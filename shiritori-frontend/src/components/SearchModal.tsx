@@ -6,9 +6,16 @@ interface Props {
     onClose: () => void;
 }
 
+interface WordSearchResult {
+    word: string;
+    reading: string;
+    meaning: string;
+    level?: string | null;
+}
+
 export default function SearchModal({ isOpen, onClose }: Props) {
     const [keyword, setKeyword] = useState('');
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<WordSearchResult | null>(null);
     const [shake, setShake] = useState(false); // 🫨 흔들림 효과용 상태
 
     // 모달이 닫히면 초기화
@@ -33,6 +40,14 @@ export default function SearchModal({ isOpen, onClose }: Props) {
             setShake(true);
             setTimeout(() => setShake(false), 500); // 0.5초 뒤에 멈춤
         }
+    };
+
+    const getLevelBadgeColor = (level?: string | null) => {
+        if (!level) return '';
+
+        if (level === 'N1') return 'bg-red-100 text-red-600';
+        if (level === 'N5') return 'bg-green-100 text-green-600';
+        return 'bg-blue-100 text-blue-600';
     };
 
     if (!isOpen) return null;
@@ -70,11 +85,11 @@ export default function SearchModal({ isOpen, onClose }: Props) {
                         <div className="text-left w-full animate-fadeIn">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="text-2xl font-black text-indigo-600">{result.word}</span>
-                                <span className={`text-xs px-2 py-1 rounded font-bold
-                                    ${result.level === 'N1' ? 'bg-red-100 text-red-600' :
-                                    result.level === 'N5' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                                    {result.level}
-                                </span>
+                                {result.level && (
+                                    <span className={`text-xs px-2 py-1 rounded font-bold ${getLevelBadgeColor(result.level)}`}>
+                                        {result.level}
+                                    </span>
+                                )}
                             </div>
                             <div className="space-y-1">
                                 <p className="text-gray-500 text-sm">

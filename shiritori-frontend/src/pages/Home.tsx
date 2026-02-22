@@ -285,6 +285,7 @@ export default function Home() {
                             <option value="N3">N3</option>
                             <option value="N2">N2</option>
                             <option value="N1">N1</option>
+                            <option value="ALL">ALL</option>
                         </select>
                     </div>
 

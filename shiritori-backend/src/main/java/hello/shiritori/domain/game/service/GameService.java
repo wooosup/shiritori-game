@@ -153,7 +153,7 @@ public class GameService {
     }
 
     private Word findStartWord(JlptLevel level) {
-        return wordRepository.findRandomStartWord(level.name())
+        return wordRepository.findRandomStartWord(toLevelFilter(level))
                 .orElseThrow(() -> new WordException("시작 단어를 찾을 수 없습니다."));
     }
 
@@ -164,8 +164,15 @@ public class GameService {
                 game.getId(),
                 JapaneseUtils.toHiragana(startChar),
                 JapaneseUtils.toKatakana(startChar),
-                game.getLevel().name()
+                toLevelFilter(game.getLevel())
         );
+    }
+
+    private String toLevelFilter(JlptLevel level) {
+        if (level == null || level == JlptLevel.ALL) {
+            return null;
+        }
+        return level.name();
     }
 
     private Word findNextAiWordOrThrow(Game game, Word lastWord) {

@@ -138,6 +138,10 @@ public class Game {
 
 
     private int calculatePoints(JlptLevel level) {
+        if (level == null) {
+            return DEFAULT_SCORE + (this.currentCombo) * 10;
+        }
+
         int base = switch (level) {
             case N1 -> N1_SCORE;
             case N2 -> N2_SCORE;

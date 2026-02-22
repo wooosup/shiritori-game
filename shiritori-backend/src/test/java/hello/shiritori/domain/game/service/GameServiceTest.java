@@ -64,6 +64,22 @@ class GameServiceTest {
         assertThat(response.getAiWord()).isEqualTo("森");
     }
 
+    @Test
+    @DisplayName("ALL 레벨에서는 레벨 조건 없이 시작 단어를 찾는다.")
+    void findRandomStartWordWithAllLevel() {
+        // given
+        wordRepository.deleteAll();
+        wordRepository.save(Word.of(JlptLevel.N1, "経済", "けいざい", "경제"));
+        wordRepository.save(Word.of(JlptLevel.N5, "雲", "くも", "구름"));
+        wordRepository.save(Word.of(null, "家族", "かぞく", "가족"));
+
+        // when
+        var result = wordRepository.findRandomStartWord(null);
+
+        // then
+        assertThat(result).isPresent();
+    }
+
     private void saveTempWordIfNotExist(String word, String reading, String meaning) {
         if (!wordRepository.existsByWord((word))) {
             wordRepository.save(Word.of(JlptLevel.N5, word, reading, meaning));

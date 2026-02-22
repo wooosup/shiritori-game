@@ -65,6 +65,14 @@ public class Word {
                 .build();
     }
 
+    public void updateFromImport(JlptLevel level, String reading, String meaning) {
+        this.level = level;
+        this.reading = reading;
+        this.meaning = meaning;
+        this.startsWith = getEffectiveStartChar();
+        this.endsWith = getEffectiveEndChar();
+    }
+
     public boolean endsWithN() {
         return reading.endsWith("ん");
     }

@@ -1,6 +1,7 @@
 package hello.shiritori.domain.game.entity;
 
 import static hello.shiritori.domain.game.entity.JlptLevel.N5;
+import static hello.shiritori.domain.game.entity.JlptLevel.ALL;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,34 @@ class GameTest {
         //then
         assertThat(game.getMaxCombo()).isEqualTo(1);
         assertThat(game.getScore()).isEqualTo(30);
+    }
+
+    @Test
+    @DisplayName("레벨이 null이어도 기본 점수로 계산한다.")
+    void applyCorrectAnswerWithNullLevel() {
+        // given
+        Game game = Game.create(null, N5);
+
+        // when
+        game.applyCorrectAnswer(null);
+
+        // then
+        assertThat(game.getScore()).isEqualTo(30);
+        assertThat(game.getMaxCombo()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("ALL 레벨도 기본 점수로 계산한다.")
+    void applyCorrectAnswerWithAllLevel() {
+        // given
+        Game game = Game.create(null, ALL);
+
+        // when
+        game.applyCorrectAnswer(ALL);
+
+        // then
+        assertThat(game.getScore()).isEqualTo(30);
+        assertThat(game.getMaxCombo()).isEqualTo(1);
     }
 
     @Test
