@@ -7,6 +7,9 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_TIMEOUT_MS = 30000;
+
+let isHandlingAuthFailure = false;
 
 // Axios 인스턴스 생성
 export const apiClient = axios.create({
@@ -14,7 +17,7 @@ export const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 5000,
+    timeout: API_TIMEOUT_MS,
 });
 
 apiClient.interceptors.request.use(async (config) => {
@@ -28,12 +31,35 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.code === 'ECONNABORTED' || error.response?.status === 401) {
-            console.warn("세션 만료 또는 타임아웃! 강제 로그아웃 진행합니다.");
-            await supabase.auth.signOut();
-            localStorage.clear();
-            globalThis.location.href = '/';
+        const status = error.response?.status;
+        const hasAuthHeader = Boolean(
+            error.config?.headers?.Authorization || error.config?.headers?.authorization
+        );
+
+        if (error.code === 'ECONNABORTED') {
+            console.warn('API timeout:', error.config?.url);
+            throw error;
         }
+
+        if (status === 401 && hasAuthHeader && !isHandlingAuthFailure) {
+            isHandlingAuthFailure = true;
+            console.warn("세션 만료! 강제 로그아웃 진행합니다.");
+
+            try {
+                await supabase.auth.signOut();
+            } catch {
+                // noop
+            }
+
+            localStorage.clear();
+
+            if (globalThis.location.pathname !== '/') {
+                globalThis.location.replace('/');
+            }
+
+            isHandlingAuthFailure = false;
+        }
+
         throw error;
     }
 );
