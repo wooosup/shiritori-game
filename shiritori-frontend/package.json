@@ -8,9 +8,16 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "cap:sync": "npx cap sync",
     "cap:sync:android": "npx cap sync android",
-    "android:prepare": "npm run build && npm run cap:sync:android",
-    "android:build": "npm run android:prepare && cd android && ./gradlew assembleDebug"
+    "cap:sync:ios": "npx cap sync ios",
+    "android:native:build": "cd android && ./gradlew assembleDebug",
+    "ios:native:build": "xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator build",
+    "android:build": "npm run build && npm run cap:sync:android && npm run android:native:build",
+    "ios:build": "npm run build && npm run cap:sync:ios && npm run ios:native:build",
+    "mobile:build": "npm run build && npm run cap:sync",
+    "api:check:dev": "node scripts/check-render-api.mjs --env dev",
+    "api:check:prod": "node scripts/check-render-api.mjs --env prod"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -1,5 +1,5 @@
 {
-  "appId": "com.yourname.shiritori",
-  "appName": "Shiritori",
+  "appId": "com.shiritori.game",
+  "appName": "Shiritori Game",
   "webDir": "dist"
 }
