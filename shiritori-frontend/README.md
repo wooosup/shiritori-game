@@ -1,100 +1,48 @@
-# React + TypeScript + Vite
+# Shiritori Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Vite + React 기반 프론트엔드입니다. 모바일 패키징은 Capacitor를 사용합니다.
 
-Currently, two official plugins are available:
+## Capacitor 고정 값 (Release 기준)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **App Name**: `Shiritori Game`
+- **App ID**: `com.shiritori.game`
+- **webDir**: `dist` (Vite 빌드 산출물)
 
-## React Compiler
+> 위 값은 릴리즈 문서(`docs/release-mobile.md`)와 동일하게 유지합니다.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-## Capacitor (Android) 설정
-
-- 앱 이름: `Shiritori`
-- 앱 ID: `com.yourname.shiritori`
-- 웹 빌드 디렉토리(`webDir`): `dist`
-
-### Android 네이티브 프로젝트 생성
+## 초기 세팅
 
 ```bash
 npm install
 npx cap add android
+npx cap add ios
 ```
 
-### 웹 변경 반영 표준 루틴
+## 표준 빌드 루틴
 
-```bash
-npm run build
-npm run cap:sync:android
-npm run android:build
-```
-
-또는 아래 단일 명령으로 동일한 순서를 실행할 수 있습니다.
+웹 빌드 → Capacitor 동기화 → 네이티브 빌드 순서를 스크립트로 제공합니다.
 
 ```bash
 npm run android:build
+npm run ios:build
 ```
+
+공통으로 웹 빌드/동기화만 수행하려면:
+
+```bash
+npm run mobile:build
+```
+
+## Render API 연결 점검
+
+환경별 API Health 체크 스크립트:
+
+```bash
+npm run api:check:dev
+npm run api:check:prod
+```
+
+- `api:check:dev`: `VITE_API_URL_DEV` → 없으면 `VITE_API_URL` → 없으면 `http://localhost:8080/api`
+- `api:check:prod`: `VITE_API_URL_PROD` → 없으면 `VITE_API_URL`
+
+`/api/healthz` 엔드포인트를 호출해 상태를 확인합니다.
