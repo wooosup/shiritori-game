@@ -25,6 +25,10 @@ Spring Boot와 React를 활용한 일본어 끝말잇기 게임입니다.
 - **Backend**: Spring Boot, JPA, PostgreSQL (Supabase)
 - **Infra**: Docker, Render, Vercel
 
+## 📘 Operations
+
+- 운영자용 채널 정책 문서: `docs/operations/channel-policy.md`
+
 ## 🏗 Architecture
 <div align="center">
     <img src="shiritori-backend/src/main/resources/static/しりとり.png" width="600">
