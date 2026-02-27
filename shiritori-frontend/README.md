@@ -71,3 +71,30 @@ export default defineConfig([
   },
 ])
 ```
+
+## Capacitor (Android) 설정
+
+- 앱 이름: `Shiritori`
+- 앱 ID: `com.yourname.shiritori`
+- 웹 빌드 디렉토리(`webDir`): `dist`
+
+### Android 네이티브 프로젝트 생성
+
+```bash
+npm install
+npx cap add android
+```
+
+### 웹 변경 반영 표준 루틴
+
+```bash
+npm run build
+npm run cap:sync:android
+npm run android:build
+```
+
+또는 아래 단일 명령으로 동일한 순서를 실행할 수 있습니다.
+
+```bash
+npm run android:build
+```
