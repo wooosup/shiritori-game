@@ -98,3 +98,48 @@ npm run android:build
 ```bash
 npm run android:build
 ```
+
+## Supabase OAuth Redirect URL 설정
+
+Supabase Dashboard > Authentication > URL Configuration > Redirect URLs에 아래 URL을 모두 등록하세요.
+
+- `shiritori://auth/callback` (앱 스킴, 앱 우선)
+- `https://<YOUR_DOMAIN>/auth/callback` (웹 콜백 유지)
+- `http://localhost:5173/auth/callback` (로컬 개발)
+
+앱에서는 네이티브 환경일 때 `shiritori://auth/callback`으로, 웹에서는 `/auth/callback`으로 자동 분기합니다.
+
+## Android/iOS 딥링크 핸들러 등록
+
+네이티브 프로젝트를 생성한 뒤 아래 설정을 추가하세요.
+
+### Android (`android/app/src/main/AndroidManifest.xml`)
+
+`MainActivity` 아래 `intent-filter`를 추가합니다.
+
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="shiritori" android:host="auth" android:pathPrefix="/callback" />
+</intent-filter>
+```
+
+### iOS (`ios/App/App/Info.plist`)
+
+URL Types에 `shiritori` 스킴을 추가합니다.
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key>
+    <string>com.yourname.shiritori.auth</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>shiritori</string>
+    </array>
+  </dict>
+</array>
+```

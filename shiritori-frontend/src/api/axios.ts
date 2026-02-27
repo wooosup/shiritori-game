@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
+import { useAuthStore } from '../stores/authStore';
 
 // Supabase 클라이언트 설정 (기존 코드 유지)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -90,6 +91,11 @@ apiClient.interceptors.response.use(
         if (status === 401 && hasAuthHeader && !isHandlingAuthFailure) {
             isHandlingAuthFailure = true;
             console.warn("세션 만료! 강제 로그아웃 진행합니다.");
+
+            useAuthStore.getState().setAuthMessage({
+                type: 'warning',
+                text: '세션이 만료되었어요. 다시 로그인해 주세요.',
+            });
 
             try {
                 await supabase.auth.signOut();

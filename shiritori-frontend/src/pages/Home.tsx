@@ -1,6 +1,8 @@
 import {useState, useEffect, useRef} from 'react'; // useRef 추가
 import {useNavigate} from 'react-router-dom';
 import {supabase, apiClient} from '../api/axios';
+import { getOAuthRedirectUrl } from '../config/authRedirect';
+import { useAuthStore } from '../stores/authStore';
 import NicknameModal from '../components/NicknameModal';
 import RuleModal from "../components/RuleModal.tsx";
 import SearchModal from '../components/SearchModal';
@@ -23,6 +25,7 @@ interface Ranking {
 
 export default function Home() {
     const navigate = useNavigate();
+    const { authMessage, clearAuthMessage } = useAuthStore();
 
     // 상태 관리
     const [user, setUser] = useState<any>(null);
@@ -130,7 +133,9 @@ export default function Home() {
     const handleLogin = async () => {
         await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: {redirectTo: window.location.origin},
+            options: {
+                redirectTo: getOAuthRedirectUrl(),
+            },
         });
     };
 
@@ -232,6 +237,25 @@ export default function Home() {
                     </button>
                 )}
             </header>
+
+
+            {authMessage && (
+                <div className={`w-full max-w-3xl mt-4 px-4 py-3 rounded-lg text-sm font-semibold flex items-center justify-between ${
+                    authMessage.type === 'success'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : authMessage.type === 'warning'
+                            ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                    <span>{authMessage.text}</span>
+                    <button
+                        className="ml-4 text-xs underline underline-offset-2"
+                        onClick={clearAuthMessage}
+                    >
+                        닫기
+                    </button>
+                </div>
+            )}
 
             <main className="flex flex-col items-center mt-32 w-full max-w-4xl px-4 animate-fadeIn">
                 <h1 className="text-6xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 mb-10 tracking-tighter">

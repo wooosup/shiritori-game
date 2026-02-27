@@ -1,18 +1,19 @@
 import { useEffect } from 'react';
-import {BrowserRouter, Routes, Route, useLocation} from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { supabase } from './api/axios';
 import { useAuthStore } from './stores/authStore';
 import Home from './pages/Home';
 import LoginModal from './components/LoginModal';
 import GamePage from './pages/GamePage';
-
+import AuthCallbackPage from './pages/AuthCallbackPage';
+import { consumeAuthRedirect, WEB_AUTH_CALLBACK_PATH } from './config/authRedirect';
 
 const RouteTracker = () => {
     const location = useLocation();
 
     useEffect(() => {
-        ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+        ReactGA.send({ hitType: 'pageview', page: location.pathname + location.search });
     }, [location]);
 
     return null;
@@ -22,14 +23,12 @@ function App() {
     const { setSession, closeLoginModal } = useAuthStore();
 
     useEffect(() => {
-        ReactGA.initialize("G-E9JYF0HN3G");
+        ReactGA.initialize('G-E9JYF0HN3G');
 
-        // 1. 초기 세션 확인
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
         });
 
-        // 2. 인증 상태 변경 감지 (로그인/로그아웃 시 자동 실행)
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -39,20 +38,47 @@ function App() {
             }
         });
 
-        return () => subscription.unsubscribe();
+        const capacitorApp = (window as any).Capacitor?.Plugins?.App;
+        let removeNativeListener: (() => void) | undefined;
+
+        const isNativePlatform =
+            typeof (window as any).Capacitor?.isNativePlatform === 'function'
+                ? (window as any).Capacitor.isNativePlatform()
+                : typeof (window as any).Capacitor?.getPlatform === 'function'
+                    ? (window as any).Capacitor.getPlatform() !== 'web'
+                    : false;
+
+        if (isNativePlatform && capacitorApp?.addListener) {
+            capacitorApp
+                .addListener('appUrlOpen', async ({ url }: { url: string }) => {
+                    if (url.startsWith('shiritori://auth/callback')) {
+                        await consumeAuthRedirect(url);
+                        window.history.replaceState({}, '', '/');
+                    }
+                })
+                .then((listener: { remove: () => void }) => {
+                    removeNativeListener = () => listener.remove();
+                });
+        }
+
+        return () => {
+            subscription.unsubscribe();
+            if (removeNativeListener) {
+                removeNativeListener();
+            }
+        };
     }, [setSession, closeLoginModal]);
 
     return (
         <BrowserRouter>
-            <RouteTracker/>
+            <RouteTracker />
 
-            {/* 라우트 설정 */}
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/game" element={<GamePage />} />
+                <Route path={WEB_AUTH_CALLBACK_PATH} element={<AuthCallbackPage />} />
             </Routes>
 
-            {/* 로그인 팝업 (어디서든 뜰 수 있게 최상위에 배치) */}
             <LoginModal />
         </BrowserRouter>
     );

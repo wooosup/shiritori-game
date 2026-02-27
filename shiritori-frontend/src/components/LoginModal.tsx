@@ -2,6 +2,7 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../api/axios';
 import { useAuthStore } from '../stores/authStore';
+import { getOAuthRedirectUrl } from '../config/authRedirect';
 
 export default function LoginModal() {
     const { isLoginModalOpen, closeLoginModal } = useAuthStore();
@@ -30,6 +31,7 @@ export default function LoginModal() {
                     onlyThirdPartyProviders={true}
                     view="sign_in"
                     showLinks={false}
+                    redirectTo={getOAuthRedirectUrl()}
                 />
             </div>
         </div>
