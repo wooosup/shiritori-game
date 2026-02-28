@@ -33,7 +33,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/games/**").authenticated()
+                        .requestMatchers("/api/games/**", "/api/profiles/**", "/api/wordBooks/**")
+                        .authenticated()
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -61,7 +62,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.addAllowedOrigin("http://localhost:5173");
+        configuration.addAllowedOrigin("http://localhost");
+        configuration.addAllowedOrigin("https://localhost");
+        configuration.addAllowedOrigin("https://localhost:5173");
         configuration.addAllowedOrigin("https://shiritori-game-gold.vercel.app");
+        configuration.addAllowedOrigin("capacitor://localhost");
+        configuration.addAllowedOrigin("ionic://localhost");
 
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
