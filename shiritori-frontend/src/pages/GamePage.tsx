@@ -705,7 +705,12 @@ export default function GamePage() {
                             <div key={i} className={`flex w-full ${!isAi ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                                 <div className={`flex flex-col max-w-[80%] ${!isAi ? 'items-end' : 'items-start'}`}>
                                     {/* AI 말풍선 위젯 메시지 */}
-                                    {msg.message && <div className="text-xs font-bold text-indigo-400 mb-1.5 pl-2">{msg.message}</div>}
+                                    {msg.message && (
+                                        <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-600 dark:border-indigo-700 dark:bg-indigo-900/55 dark:text-indigo-200">
+                                            <span className="text-[10px] font-black tracking-wide">SYSTEM</span>
+                                            <span>{msg.message}</span>
+                                        </div>
+                                    )}
 
                                     {/* 말풍선 본체 */}
                                     <div

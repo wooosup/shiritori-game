@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import {
-  HomeIcon,
-  BookOpenIcon,
   MagnifyingGlassIcon,
-  QuestionMarkCircleIcon,
   TrophyIcon,
-  Cog6ToothIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { supabase, apiClient } from '../api/axios';
@@ -15,9 +11,8 @@ import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import NicknameModal from '../components/NicknameModal';
 import RuleModal from '../components/RuleModal';
 import SearchModal from '../components/SearchModal';
-import WordBookModal from '../components/WordBookModal';
 import QuizModal from '../components/QuizModal';
-import RankingModal from '../components/RankingModal';
+import BottomTabBar, { type BottomTabKey } from '../components/BottomTabBar';
 import { signInWithGoogle, signOutNativeGoogle } from '../platform/auth';
 import { type ThemePreference, useSettingsStore } from '../stores/settingsStore';
 import StartPage from './StartPage';
@@ -108,6 +103,7 @@ function findMyBestFromList(rankings: Ranking[], nickname: string | null): Ranki
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState<User | null>(null);
   const [nickname, setNickname] = useState<string | null>(null);
@@ -118,9 +114,7 @@ export default function Home() {
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showWordBook, setShowWordBook] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
-  const [showRankingModal, setShowRankingModal] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
@@ -161,6 +155,12 @@ export default function Home() {
     }
     return themePreference === 'dark' ? '현재 적용: 다크' : '현재 적용: 라이트';
   }, [themePreference, resolvedTheme]);
+
+  const currentBottomTab: BottomTabKey = useMemo(() => {
+    if (showQuizModal) return 'quiz';
+    if (showOptionsModal) return 'options';
+    return 'home';
+  }, [showOptionsModal, showQuizModal]);
 
   const fetchRankings = useCallback(async () => {
     setRankingsError(null);
@@ -306,6 +306,23 @@ export default function Home() {
     };
   }, [fetchBannerWords, fetchRankings, fetchWordCount]);
 
+  useEffect(() => {
+    const state = location.state as { openModal?: 'quiz' | 'options' } | null;
+    if (!state?.openModal) {
+      return;
+    }
+
+    if (state.openModal === 'quiz') {
+      setShowQuizModal(true);
+    }
+
+    if (state.openModal === 'options') {
+      setShowOptionsModal(true);
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
   const handleLogin = async () => {
     setLoginError(null);
     setIsLoggingIn(true);
@@ -373,15 +390,8 @@ export default function Home() {
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_#eef2ff_0%,_#f7f7f9_38%,_#f7f7f9_100%)] dark:bg-[radial-gradient(circle_at_top_right,_#1f2937_0%,_#0f172a_42%,_#020617_100%)]">
-      <WordBookModal isOpen={showWordBook} onClose={() => setShowWordBook(false)} />
       <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
       <QuizModal isOpen={showQuizModal} onClose={() => setShowQuizModal(false)} />
-      <RankingModal
-        isOpen={showRankingModal}
-        onClose={() => setShowRankingModal(false)}
-        rankings={rankings}
-        loading={loading}
-      />
 
       {user && (
         <NicknameModal
@@ -589,7 +599,7 @@ export default function Home() {
       <main className="flex w-full flex-1 flex-col items-center overflow-y-auto px-4 pb-10 pt-5">
         <div className="flex items-center justify-between w-full max-w-md mb-5">
           <div className="text-sm font-bold text-gray-500 dark:text-slate-300 flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <BookOpenIcon className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
+            <span className="inline-flex h-4 w-4 items-center justify-center text-indigo-500 dark:text-indigo-300">📚</span>
             단어 <span className="text-indigo-600 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/60 px-2 py-0.5 rounded-lg">{totalWords.toLocaleString()}</span>
           </div>
           <button
@@ -744,55 +754,14 @@ export default function Home() {
         <div className="h-4 w-full max-w-md" />
       </main>
 
-      <nav className="flex-none w-full bg-white border-t border-gray-100 flex justify-around items-center pb-safe-bottom z-20 shadow-[0_-8px_20px_-1px_rgba(0,0,0,0.03)] pt-2 pb-2 dark:bg-slate-900 dark:border-slate-700 dark:shadow-black/40">
-        <button
-          onClick={() => window.scrollTo(0, 0)}
-          className="flex flex-col items-center justify-center w-1/5 h-12 text-indigo-600 active:scale-95 transition-all"
-        >
-          <HomeIcon className="mb-1 h-5 w-5" />
-          <span className="text-[10px] font-bold">홈</span>
-        </button>
-
-        <button
-          onClick={() => setShowWordBook(true)}
-          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
-            showWordBook ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
-          }`}
-        >
-          <BookOpenIcon className="mb-1 h-5 w-5" />
-          <span className="text-[10px] font-bold">단어장</span>
-        </button>
-
-        <button
-          onClick={() => setShowQuizModal(true)}
-          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
-            showQuizModal ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
-          }`}
-        >
-          <QuestionMarkCircleIcon className="mb-1 h-5 w-5" />
-          <span className="text-[10px] font-bold">퀴즈</span>
-        </button>
-
-        <button
-          onClick={() => setShowRankingModal(true)}
-          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
-            showRankingModal ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
-          }`}
-        >
-          <TrophyIcon className="mb-1 h-5 w-5" />
-          <span className="text-[10px] font-bold">랭킹</span>
-        </button>
-
-        <button
-          onClick={() => setShowOptionsModal(true)}
-          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
-            showOptionsModal ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
-          }`}
-        >
-          <Cog6ToothIcon className="mb-1 h-5 w-5" />
-          <span className="text-[10px] font-bold">옵션</span>
-        </button>
-      </nav>
+      <BottomTabBar
+        current={currentBottomTab}
+        onHome={() => window.scrollTo(0, 0)}
+        onWordBook={() => navigate('/wordbook')}
+        onQuiz={() => setShowQuizModal(true)}
+        onRanking={() => navigate('/ranking')}
+        onOptions={() => setShowOptionsModal(true)}
+      />
     </div>
   );
 }

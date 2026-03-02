@@ -11,6 +11,8 @@ import { handleAuthCallbackUrl, isNativeRuntime } from './platform/auth';
 import { installGlobalButtonClickSfx } from './sound/effects';
 
 const GamePage = lazy(() => import('./pages/GamePage'));
+const WordBookPage = lazy(() => import('./pages/WordBookPage'));
+const RankingPage = lazy(() => import('./pages/RankingPage'));
 
 function App() {
   const { setSession } = useAuthStore();
@@ -113,6 +115,22 @@ function App() {
           element={(
             <Suspense fallback={null}>
               <GamePage />
+            </Suspense>
+          )}
+        />
+        <Route
+          path="/wordbook"
+          element={(
+            <Suspense fallback={null}>
+              <WordBookPage />
+            </Suspense>
+          )}
+        />
+        <Route
+          path="/ranking"
+          element={(
+            <Suspense fallback={null}>
+              <RankingPage />
             </Suspense>
           )}
         />
