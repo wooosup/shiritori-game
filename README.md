@@ -1,60 +1,56 @@
-# Shiritori
+# 🎮 Shiritori
 
-Spring Boot + React + Capacitor 기반 일본어 끝말잇기 프로젝트입니다.
+Spring Boot와 React를 활용한 일본어 끝말잇기 게임입니다.
 
-## 방향
+## 📷 Preview
 
-- 서비스 기준은 Android 앱입니다.
-- 백엔드는 기존 Spring API를 원격으로 유지합니다.
+<table width="100%">
+  <tr>
+    <td align="center" width="50%">
+      <video src="https://github.com/user-attachments/assets/af2edf50-b86a-4fd1-9e9b-492466ba823b" controls autoplay loop muted style="width: 100%;"></video>
+    </td>
+    <td align="center" width="50%">
+      <video src="https://github.com/user-attachments/assets/d60b7064-418d-41dd-b73d-02fca64d3762" controls autoplay loop muted style="width: 100%;"></video>
+    </td>
+  </tr>
+</table>
 
-## 스택
+## 🚀 Getting Started
 
-- Frontend: React, TypeScript, Tailwind, Capacitor
-- Backend: Spring Boot, JPA, PostgreSQL
-- Auth: Supabase OAuth + JWT
+- [게임 하러가기](https://shiritori-game-gold.vercel.app/)
 
-## 개발 진입
+## 🛠 Stack
 
-1. Backend
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **Backend**: Spring Boot, JPA, PostgreSQL (Supabase)
+- **Infra**: Docker, Render, Vercel
 
-```bash
-cd shiritori-backend
-./gradlew bootRun
-```
+## 📘 Operations
 
-계정 탈퇴(인증 계정까지 삭제)를 사용하려면 백엔드 실행 환경에 아래 변수가 필요합니다.
+- 운영자용 채널 정책 문서: `docs/operations/channel-policy.md`
 
-```bash
-export SUPABASE_PROJECT_URL="https://<project>.supabase.co"
-export SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"
-```
+## 🏗 Architecture
+<div align="center">
+    <img src="shiritori-backend/src/main/resources/static/しりとり.png" width="600">
+</div>
 
-2. Frontend
+## 🗄️ ERD
 
-```bash
-cd shiritori-frontend
-npm install
-npm run dev
-```
+<div align="center">
+    <img src="shiritori-backend/src/main/resources/static/erd.png" width="500">
+</div>
 
-## 검증 명령
+## 💣 Troubleshooting
 
-```bash
-cd shiritori-backend && ./gradlew test
-cd shiritori-frontend && npm run test:run && npm run build
-```
+### 1. 무료 클라우드 환경의 연결 불안정 해결
 
-## 모바일 내부 테스트 배포
+- **문제**: Render(서버)와 Supabase(DB) 간의 물리적 거리 및 Free Tier 절전 모드로 인해 `SocketTimeoutException`이 빈번하게 발생.
+- **해결**: `application.properties`에서 HikariCP 설정을 튜닝. `connection-timeout`을 60초로 늘리고, `validation-timeout`을 조정하여 연결 끊김
+  현상을 90% 이상 감소시킴.
 
-- Android Internal: `npm run android:release`
-- 릴리즈 전 필수: `npm run mobile:check-env` (`localhost`/`example.supabase.co`/`public-anon-key` 금지)
-- Android release signing env: `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+### 2. 데이터 무결성 보장
 
-자세한 배포 절차는 `shiritori-frontend/docs/internal-testing-release.md` 참고.
+- **문제**: 구글 로그인 직후, 백엔드 서버가 프로필을 조회할 때 데이터가 생성되지 않아 500 에러 발생.
+- **해결**: 애플리케이션 레벨이 아닌 DB 레벨에서 처리하도록 **PostgreSQL Trigger**를 구현. `auth.users`에 데이터가 들어오는 즉시 `public.profiles`에 복제되도록 하여
+  원자성 보장.
 
-## Google Play 런칭 준비 문서
-
-1. 체크리스트: `shiritori-frontend/docs/play-store-upload-checklist.md`
-2. Data safety: `shiritori-frontend/docs/play-store/data-safety-matrix.md`
-3. Privacy policy 점검: `shiritori-frontend/docs/play-store/privacy-policy-checklist.md`
-4. App access 심사 입력: `shiritori-frontend/docs/play-store/app-access-for-review.md`
