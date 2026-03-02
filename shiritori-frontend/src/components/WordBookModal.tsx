@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../api/axios';
+import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 
 interface WordBookItem {
     id: number;
@@ -36,6 +37,29 @@ export default function WordBookModal({ isOpen, onClose }: Readonly<Props>) {
 
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
+    const triggerShake = () => {
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+    };
+
+    const fetchWords = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await apiClient.get<ApiResponse<WordBookItem[]>>('/wordBooks');
+            if (res.data.code === 200) {
+                setWords(res.data.data);
+            }
+        } catch (error: unknown) {
+            if (getApiErrorStatus(error) === 401) {
+                setErrorMsg('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+                triggerShake();
+                return;
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         if (isOpen) {
             fetchWords();
@@ -46,31 +70,7 @@ export default function WordBookModal({ isOpen, onClose }: Readonly<Props>) {
             setShowMeaning(true);
             setDeleteTargetId(null)
         }
-    }, [isOpen]);
-
-    const triggerShake = () => {
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
-    };
-
-    const fetchWords = async () => {
-        setLoading(true);
-        try {
-            const res = await apiClient.get<ApiResponse<WordBookItem[]>>('/wordBooks');
-            if (res.data.code === 200) {
-                setWords(res.data.data);
-            }
-        } catch (error: any) {
-            console.error(error);
-            if (error.response?.status === 401) {
-                setErrorMsg('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-                triggerShake();
-                return;
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [isOpen, fetchWords]);
 
     const handleAddWord = async () => {
         if (!inputText.trim()) return;
@@ -85,8 +85,8 @@ export default function WordBookModal({ isOpen, onClose }: Readonly<Props>) {
                 setInputText('');
                 fetchWords();
             }
-        } catch (error: any) {
-            const msg = error.response?.data?.message || "추가 실패";
+        } catch (error: unknown) {
+            const msg = getApiErrorMessage(error, "추가 실패");
             setErrorMsg(msg);
             triggerShake();
         } finally {
@@ -101,7 +101,7 @@ export default function WordBookModal({ isOpen, onClose }: Readonly<Props>) {
             await apiClient.delete(`/wordBooks/${deleteTargetId}`);
             setWords(prev => prev.filter(item => item.id !== deleteTargetId));
             setDeleteTargetId(null);
-        } catch (error) {
+        } catch {
             setErrorMsg("삭제 중 오류가 발생했습니다.");
             triggerShake();
             setDeleteTargetId(null);

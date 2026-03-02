@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { apiClient } from '../api/axios';
 
 interface Props {
@@ -18,14 +18,12 @@ export default function SearchModal({ isOpen, onClose }: Props) {
     const [result, setResult] = useState<WordSearchResult | null>(null);
     const [shake, setShake] = useState(false); // 🫨 흔들림 효과용 상태
 
-    // 모달이 닫히면 초기화
-    useEffect(() => {
-        if (!isOpen) {
-            setKeyword('');
-            setResult(null);
-            setShake(false);
-        }
-    }, [isOpen]);
+    const handleClose = () => {
+        setKeyword('');
+        setResult(null);
+        setShake(false);
+        onClose();
+    };
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +32,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
         try {
             const res = await apiClient.get(`/words/search?keyword=${keyword}`);
             setResult(res.data.data);
-        } catch (err: any) {
+        } catch {
             setResult(null);
 
             setShake(true);
@@ -55,7 +53,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
             <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-2xl relative animate-scaleUp">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">✕</button>
+                <button onClick={handleClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">✕</button>
 
                 <h2 className="text-xl font-bold text-gray-800 mb-4">📖 단어 사전</h2>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/axios';
+import { getApiErrorMessage } from '../api/error';
 
 interface QuizData {
     id: number;
@@ -46,9 +47,9 @@ export default function QuizModal({ isOpen, onClose }: Readonly<Props>) {
             if (res.data.code === 200) {
                 setQuizzes(res.data.data);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             setQuizzes([]);
-            setFetchError(error.response?.data?.message || '단어장이 비어있습니다!');
+            setFetchError(getApiErrorMessage(error, '단어장이 비어있습니다!'));
         } finally {
             setLoading(false);
         }
@@ -129,7 +130,7 @@ export default function QuizModal({ isOpen, onClose }: Readonly<Props>) {
                             />
                         </div>
 
-                        <div className="text-sm font-bold text-indigo-500 mb-2">Question {currentIndex + 1}/{quizzes.length}</div>
+                        <div className="text-sm font-bold text-indigo-500 mb-2">문제 {currentIndex + 1}/{quizzes.length}</div>
 
                         <div className="flex-1 flex items-center justify-center mb-8">
                             <h2 className="text-3xl font-black text-gray-800 text-center leading-tight">

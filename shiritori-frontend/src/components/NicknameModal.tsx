@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiClient } from '../api/axios';
+import { getApiErrorMessage } from '../api/error';
 
 interface Props {
     isOpen: boolean;
@@ -27,8 +28,8 @@ export default function NicknameModal({ isOpen, onSuccess, onClose, canClose }: 
         try {
             await apiClient.post('/profiles/nickname', { nickname });
             onSuccess(nickname);
-        } catch (err: any) {
-            const msg = err.response?.data?.message || "오류가 발생했습니다.";
+        } catch (error: unknown) {
+            const msg = getApiErrorMessage(error, "오류가 발생했습니다.");
             setError(msg);
         } finally {
             setLoading(false);

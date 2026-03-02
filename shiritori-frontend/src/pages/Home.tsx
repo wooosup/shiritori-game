@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { User } from '@supabase/supabase-js';
+import {
+  HomeIcon,
+  BookOpenIcon,
+  MagnifyingGlassIcon,
+  QuestionMarkCircleIcon,
+  TrophyIcon,
+  Cog6ToothIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 import { supabase, apiClient } from '../api/axios';
+import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import NicknameModal from '../components/NicknameModal';
 import RuleModal from '../components/RuleModal';
 import SearchModal from '../components/SearchModal';
@@ -23,6 +34,12 @@ export interface Ranking {
   score: number;
   level: string;
   endedAt: string;
+}
+
+interface BannerWord {
+  word: string;
+  reading: string;
+  meaning: string;
 }
 
 const LEVEL_OPTIONS = [
@@ -92,7 +109,7 @@ function findMyBestFromList(rankings: Ranking[], nickname: string | null): Ranki
 export default function Home() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [nickname, setNickname] = useState<string | null>(null);
   const [level, setLevel] = useState('N5');
   const [rankings, setRankings] = useState<Ranking[]>([]);
@@ -108,7 +125,7 @@ export default function Home() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   const [totalWords, setTotalWords] = useState<number>(0);
-  const [bannerWords, setBannerWords] = useState<any[]>([]);
+  const [bannerWords, setBannerWords] = useState<BannerWord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoadingMyRank, setIsLoadingMyRank] = useState(false);
   const [totalWordsError, setTotalWordsError] = useState<string | null>(null);
@@ -182,7 +199,7 @@ export default function Home() {
   const fetchBannerWords = useCallback(async () => {
     setBannerError(null);
     try {
-      const randomRes = await apiClient.get<ApiResponse<any[]>>('/words/random');
+      const randomRes = await apiClient.get<ApiResponse<BannerWord[]>>('/words/random');
       if (randomRes.data.code === 200 && isMounted.current) {
         setBannerWords(randomRes.data.data);
         return;
@@ -236,8 +253,8 @@ export default function Home() {
             if (isMounted.current && profileRes.data.code === 200) {
               setNickname(profileRes.data.data.nickname);
             }
-          } catch (err: any) {
-            if (err.response?.status === 401) {
+          } catch (error: unknown) {
+            if (getApiErrorStatus(error) === 401) {
               handleLogout();
               return;
             }
@@ -294,9 +311,9 @@ export default function Home() {
     setIsLoggingIn(true);
     try {
       await signInWithGoogle();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('로그인 시작 실패:', error);
-      setLoginError(error?.message || '로그인을 시작하지 못했어요. 잠시 후 다시 시도해주세요.');
+      setLoginError(getApiErrorMessage(error, '로그인을 시작하지 못했어요. 잠시 후 다시 시도해주세요.'));
     } finally {
       setIsLoggingIn(false);
     }
@@ -387,12 +404,12 @@ export default function Home() {
 
       {showOptionsModal ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 backdrop-blur-[1px]">
-          <div className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-2xl animate-slideInUp">
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-200" />
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-2xl animate-slideInUp dark:bg-slate-900 dark:shadow-black/50">
+            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-200 dark:bg-slate-700" />
 
             <div className="mb-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">옵션</p>
-              <p className="text-base font-bold text-gray-800">{nickname || '닉네임 미설정'}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-slate-500">옵션</p>
+              <p className="text-base font-bold text-gray-800 dark:text-slate-100">{nickname || '닉네임 미설정'}</p>
             </div>
 
             {optionsError ? (
@@ -402,8 +419,8 @@ export default function Home() {
             ) : null}
 
             <div className="space-y-2">
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                <p className="mb-2 text-sm font-bold text-gray-700">테마</p>
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+                <p className="mb-2 text-sm font-bold text-gray-700 dark:text-slate-200">테마</p>
                 <div className="grid grid-cols-3 gap-2">
                   {THEME_OPTIONS.map((option) => {
                     const active = themePreference === option.value;
@@ -415,7 +432,7 @@ export default function Home() {
                         className={`rounded-xl border px-2 py-2 text-xs font-bold transition active:scale-[0.99] ${
                           active
                             ? 'border-indigo-600 bg-indigo-600 text-white'
-                            : 'border-gray-200 bg-white text-gray-600'
+                            : 'border-gray-200 bg-white text-gray-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'
                         }`}
                       >
                         {option.label}
@@ -431,16 +448,16 @@ export default function Home() {
                   setShowOptionsModal(false);
                   setShowNicknameModal(true);
                 }}
-                className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99]"
+                className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <span>닉네임 변경</span>
-                <span className="text-gray-400">›</span>
+                <span className="text-gray-400 dark:text-slate-500">›</span>
               </button>
 
               <button
                 data-sfx="off"
                 onClick={toggleSfx}
-                className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99]"
+                className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <span>효과음</span>
                 <span className={sfxEnabled ? 'text-indigo-600' : 'text-red-500'}>{sfxEnabled ? '켜짐' : '꺼짐'}</span>
@@ -451,20 +468,20 @@ export default function Home() {
                   setShowOptionsModal(false);
                   setShowRuleModal(true);
                 }}
-                className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99]"
+                className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <span>게임 규칙</span>
-                <span className="text-gray-400">›</span>
+                <span className="text-gray-400 dark:text-slate-500">›</span>
               </button>
 
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-gray-500">약관 및 정책</p>
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-gray-500 dark:text-slate-400">약관 및 정책</p>
                 <div className="space-y-2">
                   <button
                     onClick={() => {
                       openLegalPage('privacy');
                     }}
-                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99]"
+                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99] dark:bg-slate-900 dark:text-slate-200"
                   >
                     <span>개인정보처리방침</span>
                     <span className="text-xs font-semibold text-indigo-500">열기</span>
@@ -474,7 +491,7 @@ export default function Home() {
                     onClick={() => {
                       openLegalPage('account-deletion');
                     }}
-                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99]"
+                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99] dark:bg-slate-900 dark:text-slate-200"
                   >
                     <span>계정 삭제 안내</span>
                     <span className="text-xs font-semibold text-indigo-500">열기</span>
@@ -487,7 +504,7 @@ export default function Home() {
                   setShowOptionsModal(false);
                   handleLogout();
                 }}
-                className="flex w-full items-center justify-between rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 active:scale-[0.99]"
+                className="flex w-full items-center justify-between rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 active:scale-[0.99] dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
               >
                 <span>로그아웃</span>
                 <span className="text-red-300">›</span>
@@ -512,7 +529,7 @@ export default function Home() {
                 setShowDeleteConfirmModal(false);
                 setOptionsError(null);
               }}
-              className="mt-4 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-500 active:scale-[0.99]"
+              className="mt-4 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-500 active:scale-[0.99] dark:border-slate-700 dark:text-slate-300"
             >
               닫기
             </button>
@@ -560,27 +577,35 @@ export default function Home() {
         <div className="flex h-14 items-center justify-between px-4">
           <img src="/logo.png" alt="しりとり" className="h-8 w-auto object-contain" />
 
-          <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white px-3 py-2 text-left shadow-[0_4px_16px_-10px_rgba(79,70,229,0.45)] dark:border-indigo-800 dark:from-indigo-900 dark:to-slate-900">
+          <div className="flex items-center gap-2 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white px-2.5 py-1.5 shadow-[0_4px_16px_-10px_rgba(79,70,229,0.45)] dark:border-indigo-800 dark:from-indigo-900/70 dark:to-slate-900">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-black text-white dark:bg-indigo-500">
+              {displayNickname.charAt(0)}
+            </span>
             <p className="max-w-[96px] truncate text-sm font-black text-indigo-900 dark:text-indigo-100">{displayNickname}</p>
           </div>
         </div>
       </header>
 
-      <main className="flex w-full flex-1 flex-col items-center overflow-y-auto px-4 pb-8 pt-5">
+      <main className="flex w-full flex-1 flex-col items-center overflow-y-auto px-4 pb-10 pt-5">
         <div className="flex items-center justify-between w-full max-w-md mb-5">
-          <div className="text-sm font-bold text-gray-500 flex items-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm">
-            📚 단어 <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{totalWords.toLocaleString()}</span>
+          <div className="text-sm font-bold text-gray-500 dark:text-slate-300 flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+            <BookOpenIcon className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
+            단어 <span className="text-indigo-600 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/60 px-2 py-0.5 rounded-lg">{totalWords.toLocaleString()}</span>
           </div>
           <button
             onClick={() => setShowSearchModal(true)}
-            className="bg-white px-4 py-2 rounded-2xl text-gray-500 hover:text-indigo-600 shadow-sm transition active:scale-95 text-sm font-bold flex items-center gap-1"
+            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 px-4 py-2 rounded-2xl text-gray-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 shadow-sm transition active:scale-95 text-sm font-bold flex items-center gap-1"
           >
-            🔍 검색
+            <MagnifyingGlassIcon className="h-4 w-4" />
+            검색
           </button>
         </div>
 
         <section className="mb-5 w-full max-w-md rounded-3xl border border-indigo-100 bg-white/95 p-4 shadow-[0_8px_30px_-20px_rgba(79,70,229,0.45)] dark:border-indigo-800 dark:bg-slate-900">
-          <p className="text-[11px] font-black tracking-[0.04em] text-indigo-500 dark:text-indigo-300">오늘의 단어</p>
+          <div className="flex items-center gap-1.5">
+            <SparklesIcon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" />
+            <p className="text-[11px] font-black tracking-[0.04em] text-indigo-500 dark:text-indigo-300">오늘의 단어</p>
+          </div>
           <p className="mt-1 text-2xl font-black tracking-tight text-indigo-900 dark:text-indigo-100">
             {featuredWord?.word || 'しりとり'}
           </p>
@@ -624,7 +649,7 @@ export default function Home() {
           <div className="mb-3 flex items-center justify-between rounded-2xl border border-indigo-100 bg-indigo-50/70 px-3 py-2 dark:border-indigo-800 dark:bg-indigo-950/40">
             <div>
               <p className="text-[10px] font-black tracking-[0.08em] text-indigo-500 dark:text-indigo-300">게임 안내</p>
-              <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">제한 시간 20초 · PASS 3회</p>
+              <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">제한 시간 20초 · 패스 3회</p>
             </div>
             <button
               onClick={() => setShowRuleModal(true)}
@@ -661,14 +686,17 @@ export default function Home() {
             onClick={handleStart}
             className="flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-indigo-600 text-lg font-black leading-none text-white shadow-[0_4px_12px_rgba(79,70,229,0.3)] transition-transform active:scale-95"
           >
-            START
+            게임 시작
           </button>
         </div>
 
         <div className="mb-6 w-full max-w-md rounded-3xl border border-indigo-100 bg-white p-4 shadow-[0_10px_28px_-18px_rgba(79,70,229,0.45)] dark:border-indigo-800 dark:bg-slate-900">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-black text-indigo-900 dark:text-indigo-100">나의 최고 기록</h3>
+              <h3 className="flex items-center gap-1 text-sm font-black text-indigo-900 dark:text-indigo-100">
+                <TrophyIcon className="h-4 w-4 text-amber-500 dark:text-amber-300" />
+                나의 최고 기록
+              </h3>
               <p className="mt-0.5 text-[11px] font-semibold text-indigo-500 dark:text-indigo-300">한 판 더 해서 기록 갱신에 도전해보세요.</p>
             </div>
             {displayMyRankTimestamp ? (
@@ -689,9 +717,9 @@ export default function Home() {
                   <p className="text-[11px] font-bold tracking-[0.06em] text-indigo-500 dark:text-indigo-300">점수</p>
                   <p className="mt-1 text-2xl font-black text-indigo-900 dark:text-indigo-100">{displayMyRank.score.toLocaleString()}</p>
                 </div>
-                <div className="rounded-2xl border border-gray-200 bg-gray-50/70 px-3 py-3">
-                  <p className="text-[11px] font-bold tracking-[0.06em] text-gray-500">최대 콤보</p>
-                  <p className="mt-1 text-2xl font-black text-gray-900">{displayMyRank.maxCombo}</p>
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/70 px-3 py-3 dark:border-slate-700 dark:bg-slate-800">
+                  <p className="text-[11px] font-bold tracking-[0.06em] text-gray-500 dark:text-slate-400">최대 콤보</p>
+                  <p className="mt-1 text-2xl font-black text-gray-900 dark:text-slate-100">{displayMyRank.maxCombo}</p>
                 </div>
               </div>
             ) : (
@@ -721,39 +749,47 @@ export default function Home() {
           onClick={() => window.scrollTo(0, 0)}
           className="flex flex-col items-center justify-center w-1/5 h-12 text-indigo-600 active:scale-95 transition-all"
         >
-          <span className="text-xl mb-1">🏠</span>
+          <HomeIcon className="mb-1 h-5 w-5" />
           <span className="text-[10px] font-bold">홈</span>
         </button>
 
         <button
           onClick={() => setShowWordBook(true)}
-          className="flex flex-col items-center justify-center w-1/5 h-12 text-gray-500 hover:text-indigo-500 active:scale-95 transition-all"
+          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
+            showWordBook ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
+          }`}
         >
-          <span className="text-xl mb-1">📒</span>
+          <BookOpenIcon className="mb-1 h-5 w-5" />
           <span className="text-[10px] font-bold">단어장</span>
         </button>
 
         <button
           onClick={() => setShowQuizModal(true)}
-          className="flex flex-col items-center justify-center w-1/5 h-12 text-gray-500 hover:text-indigo-500 active:scale-95 transition-all"
+          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
+            showQuizModal ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
+          }`}
         >
-          <span className="text-xl mb-1">📝</span>
+          <QuestionMarkCircleIcon className="mb-1 h-5 w-5" />
           <span className="text-[10px] font-bold">퀴즈</span>
         </button>
 
         <button
           onClick={() => setShowRankingModal(true)}
-          className="flex flex-col items-center justify-center w-1/5 h-12 text-gray-500 hover:text-indigo-500 active:scale-95 transition-all"
+          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
+            showRankingModal ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
+          }`}
         >
-          <span className="text-xl mb-1">👑</span>
+          <TrophyIcon className="mb-1 h-5 w-5" />
           <span className="text-[10px] font-bold">랭킹</span>
         </button>
 
         <button
           onClick={() => setShowOptionsModal(true)}
-          className="flex flex-col items-center justify-center w-1/5 h-12 text-gray-500 hover:text-indigo-500 active:scale-95 transition-all"
+          className={`flex flex-col items-center justify-center w-1/5 h-12 active:scale-95 transition-all ${
+            showOptionsModal ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-500'
+          }`}
         >
-          <span className="text-xl mb-1">⚙️</span>
+          <Cog6ToothIcon className="mb-1 h-5 w-5" />
           <span className="text-[10px] font-bold">옵션</span>
         </button>
       </nav>

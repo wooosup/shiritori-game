@@ -1,4 +1,3 @@
-import { Browser } from '@capacitor/browser';
 import { GoogleAuth } from '@southdevs/capacitor-google-auth';
 import { supabase } from '../api/axios';
 import { appEnv } from '../config/env';
@@ -12,20 +11,12 @@ export const getOAuthRedirectUrl = (): string => {
   return isNativeRuntime() ? NATIVE_OAUTH_REDIRECT_URL : window.location.origin;
 };
 
-const getNativeGoogleClientId = (): string => {
-  const platform = getRuntimePlatform();
-  if (platform === 'android' && appEnv.googleAndroidClientId) {
-    return appEnv.googleAndroidClientId;
-  }
-  return appEnv.googleWebClientId;
-};
-
 const hasNativeGoogleConfig = (): boolean => {
-  return getNativeGoogleClientId().length > 0;
+  return appEnv.googleWebClientId.length > 0;
 };
 
 async function signInWithSupabaseOAuth(native: boolean): Promise<void> {
-  const { data, error } = await supabase.auth.signInWithOAuth({
+  const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: getOAuthRedirectUrl(),
@@ -36,10 +27,6 @@ async function signInWithSupabaseOAuth(native: boolean): Promise<void> {
   if (error) {
     throw error;
   }
-
-  if (native && data?.url) {
-    await Browser.open({ url: data.url });
-  }
 }
 
 const ensureNativeGoogleInitialized = (): void => {
@@ -48,7 +35,7 @@ const ensureNativeGoogleInitialized = (): void => {
   }
 
   GoogleAuth.initialize({
-    clientId: getNativeGoogleClientId(),
+    clientId: appEnv.googleWebClientId,
     scopes: ['profile', 'email'],
     grantOfflineAccess: true,
   });
@@ -72,19 +59,24 @@ export async function signInWithGoogle(): Promise<void> {
   const native = isNativeRuntime();
   const platform = getRuntimePlatform();
 
+  if (native && !appEnv.googleWebClientId) {
+    throw new Error(
+      'Google OAuth 설정이 필요합니다. VITE_GOOGLE_WEB_CLIENT_ID를 설정하고 다시 시도해주세요.',
+    );
+  }
+
   if (native && platform === 'android' && !appEnv.googleAndroidClientId) {
     throw new Error(
       'Android Google OAuth 설정이 필요합니다. VITE_GOOGLE_ANDROID_CLIENT_ID를 설정하고 다시 시도해주세요.',
     );
   }
 
-  if (native && hasNativeGoogleConfig()) {
+  if (native) {
     ensureNativeGoogleInitialized();
 
     try {
       const user = await GoogleAuth.signIn({
         scopes: ['profile', 'email'],
-        serverClientId: appEnv.googleWebClientId,
       });
       const idToken = user.authentication?.idToken;
 
@@ -107,15 +99,16 @@ export async function signInWithGoogle(): Promise<void> {
       const message = maybeError?.message ?? '';
 
       if (platform === 'android' && (code === '10' || message.includes('code":"10'))) {
-        await signInWithSupabaseOAuth(native);
-        return;
+        throw new Error(
+          'Google 로그인 설정 오류(code 10)입니다. Google Cloud Console에 Android OAuth Client(패키지명 com.shiritori.game + SHA-1)를 등록하고 다시 시도해주세요.',
+        );
       }
 
       throw error;
     }
   }
 
-  await signInWithSupabaseOAuth(native);
+  await signInWithSupabaseOAuth(false);
 }
 
 export async function handleAuthCallbackUrl(url: string): Promise<boolean> {

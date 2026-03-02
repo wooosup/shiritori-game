@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getOAuthRedirectUrl, handleAuthCallbackUrl, signInWithGoogle } from './auth';
 import { supabase } from '../api/axios';
 import { getRuntimePlatform, isNativeApp } from './runtime';
-import { Browser } from '@capacitor/browser';
 import { GoogleAuth } from '@southdevs/capacitor-google-auth';
 import { appEnv } from '../config/env';
 
@@ -28,13 +27,6 @@ vi.mock('../api/axios', () => ({
       signInWithIdToken: vi.fn().mockResolvedValue({ error: null }),
       setSession: vi.fn(),
     },
-  },
-}));
-
-vi.mock('@capacitor/browser', () => ({
-  Browser: {
-    open: vi.fn(),
-    close: vi.fn(),
   },
 }));
 
@@ -72,7 +64,7 @@ describe('auth platform helpers', () => {
     await signInWithGoogle();
 
     expect(GoogleAuth.initialize).toHaveBeenCalledWith({
-      clientId: 'google-android-client-id.apps.googleusercontent.com',
+      clientId: 'google-web-client-id.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
       grantOfflineAccess: true,
     });
@@ -83,29 +75,22 @@ describe('auth platform helpers', () => {
     });
     expect(GoogleAuth.signIn).toHaveBeenCalledWith({
       scopes: ['profile', 'email'],
-      serverClientId: 'google-web-client-id.apps.googleusercontent.com',
     });
     expect(supabase.auth.signInWithOAuth).not.toHaveBeenCalled();
-    expect(Browser.open).not.toHaveBeenCalled();
   });
 
-  it('falls back to browser oauth when native google client id is missing', async () => {
-    vi.mocked(isNativeApp).mockReturnValue(true);
+  it('uses browser oauth on web runtime', async () => {
+    vi.mocked(isNativeApp).mockReturnValue(false);
     vi.mocked(getRuntimePlatform).mockReturnValue('web');
-    vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValue({
-      data: { url: 'https://example.supabase.co/auth/v1/authorize' },
-      error: null,
-    } as never);
+    appEnv.googleWebClientId = '';
+    vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValue({ data: {}, error: null } as never);
 
     await signInWithGoogle();
 
     expect(supabase.auth.signInWithOAuth).toHaveBeenCalled();
-    expect(Browser.open).toHaveBeenCalledWith({
-      url: 'https://example.supabase.co/auth/v1/authorize',
-    });
   });
 
-  it('falls back to browser oauth when android native sign-in returns code 10', async () => {
+  it('throws clear error when android native sign-in returns code 10', async () => {
     vi.mocked(isNativeApp).mockReturnValue(true);
     vi.mocked(getRuntimePlatform).mockReturnValue('android');
     appEnv.googleWebClientId = 'google-web-client-id.apps.googleusercontent.com';
@@ -114,17 +99,10 @@ describe('auth platform helpers', () => {
       code: '10',
       message: 'Something went wrong',
     } as never);
-    vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValue({
-      data: { url: 'https://example.supabase.co/auth/v1/authorize' },
-      error: null,
-    } as never);
-
-    await signInWithGoogle();
-
-    expect(supabase.auth.signInWithOAuth).toHaveBeenCalled();
-    expect(Browser.open).toHaveBeenCalledWith({
-      url: 'https://example.supabase.co/auth/v1/authorize',
-    });
+    await expect(signInWithGoogle()).rejects.toThrowError(
+      'Google 로그인 설정 오류(code 10)입니다. Google Cloud Console에 Android OAuth Client(패키지명 com.shiritori.game + SHA-1)를 등록하고 다시 시도해주세요.',
+    );
+    expect(supabase.auth.signInWithOAuth).not.toHaveBeenCalled();
     expect(supabase.auth.signInWithIdToken).not.toHaveBeenCalled();
   });
 
