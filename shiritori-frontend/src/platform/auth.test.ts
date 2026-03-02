@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getOAuthRedirectUrl, handleAuthCallbackUrl, signInWithGoogle } from './auth';
+import {
+  __resetNativeGoogleInitForTest,
+  getOAuthRedirectUrl,
+  handleAuthCallbackUrl,
+  signInWithGoogle,
+} from './auth';
 import { supabase } from '../api/axios';
 import { getRuntimePlatform, isNativeApp } from './runtime';
 import { GoogleAuth } from '@southdevs/capacitor-google-auth';
@@ -41,8 +46,10 @@ vi.mock('@southdevs/capacitor-google-auth', () => ({
 describe('auth platform helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetNativeGoogleInitForTest();
     vi.mocked(isNativeApp).mockReturnValue(false);
     vi.mocked(getRuntimePlatform).mockReturnValue('web');
+    vi.mocked(GoogleAuth.initialize).mockResolvedValue(undefined);
     appEnv.googleWebClientId = '';
     appEnv.googleAndroidClientId = '';
   });
@@ -74,7 +81,9 @@ describe('auth platform helpers', () => {
       token: 'native-google-id-token',
     });
     expect(GoogleAuth.signIn).toHaveBeenCalledWith({
+      clientId: 'google-web-client-id.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
     });
     expect(supabase.auth.signInWithOAuth).not.toHaveBeenCalled();
   });

@@ -4,7 +4,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { apiClient } from '../api/axios';
 import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
-import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
+import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
 import { playErrorSfx } from '../sound/effects';
 import { isNativeApp } from '../platform/runtime';
 import './GamePage.css';
@@ -639,19 +639,19 @@ export default function GamePage() {
                                 <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 leading-none">{level}</span>
                             </div>
                             
-                            {/* 패스 버튼 (좌측으로 이동 및 캡슐 형태로 디자인 변경) */}
+                            {/* 패스 버튼 (심플하고 세련된 디자인) */}
                             <button
                                 onClick={handlePassClick}
                                 disabled={passCount <= 0 || loading || isGameOver || isPaused || resumeCountdown !== null}
                                 className={`
-                                    h-10 min-w-[102px] flex items-center justify-center gap-1.5 px-3 rounded-full transition-all border
+                                    h-9 flex items-center justify-center gap-1.5 px-3.5 rounded-xl transition-all font-bold text-xs border
                                     ${passCount > 0 && !isPaused && resumeCountdown === null
-                                    ? 'bg-amber-50 border-amber-200 text-amber-700 active:scale-95 shadow-[0_6px_16px_-12px_rgba(245,158,11,0.9)] dark:bg-amber-900/40 dark:border-amber-700/70 dark:text-amber-200'
-                                    : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500'}
+                                    ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-95 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700'
+                                    : 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-500'}
                                 `}
                             >
-                                <span className="text-[11px] font-black tracking-[0.06em]">패스</span>
-                                <div className={`w-5 h-5 flex items-center justify-center rounded-full text-[11px] font-black ${passCount > 0 ? 'bg-white text-amber-600 shadow-sm dark:bg-slate-900 dark:text-amber-200' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                <span className="tracking-widest">PASS</span>
+                                <div className={`w-4 h-4 flex items-center justify-center rounded-full text-[10px] ${passCount > 0 ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-gray-200 text-gray-400 dark:bg-slate-700 dark:text-slate-500'}`}>
                                     {passCount}
                                 </div>
                             </button>
@@ -659,19 +659,21 @@ export default function GamePage() {
 
                         {/* 우측 정보 (콤보, 스코어) */}
                         <div className="flex items-center gap-4">
+                            {/* 일시정지 버튼 (심플하고 세련된 디자인) */}
                             <button
                                 onClick={handlePauseToggle}
                                 disabled={!gameId || isGameOver || loading || resumeCountdown !== null}
                                 className={`
-                                    h-10 min-w-[94px] px-3 rounded-full text-[11px] font-black tracking-[0.04em] transition border
+                                    w-9 h-9 flex items-center justify-center rounded-xl transition-all border
                                     ${!gameId || isGameOver || loading || resumeCountdown !== null
-                                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500'
+                                        ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-500'
                                         : isPaused
-                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 active:scale-95 dark:bg-emerald-900/40 dark:border-emerald-700/70 dark:text-emerald-200'
-                                            : 'bg-sky-50 border-sky-200 text-sky-700 active:scale-95 dark:bg-sky-900/40 dark:border-sky-700/70 dark:text-sky-200'}
+                                            ? 'bg-indigo-50 border-indigo-200 text-indigo-600 active:scale-95 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-300'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700'}
                                 `}
+                                aria-label={isPaused ? '재개하기' : '일시정지'}
                             >
-                                {isPaused ? '재개하기' : '일시정지'}
+                                {isPaused ? <PlayIcon className="w-4 h-4 ml-0.5" /> : <PauseIcon className="w-4 h-4" />}
                             </button>
 
                             {combo > 1 && (

@@ -19,7 +19,19 @@ function toAxiosError(error: unknown): AxiosError<ApiErrorPayload> | null {
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const axiosError = toAxiosError(error);
-  return axiosError?.response?.data?.message ?? fallback;
+  if (axiosError?.response?.data?.message) {
+    return axiosError.response.data.message;
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+
+  return fallback;
 }
 
 export function getApiErrorStatus(error: unknown): number | undefined {

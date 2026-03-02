@@ -4,6 +4,7 @@ import { appEnv } from '../config/env';
 import { getRuntimePlatform, isNativeApp } from './runtime';
 
 const NATIVE_OAUTH_REDIRECT_URL = 'shiritori://auth/callback';
+let nativeGoogleInitPromise: Promise<void> | null = null;
 
 export const isNativeRuntime = () => isNativeApp();
 
@@ -29,16 +30,23 @@ async function signInWithSupabaseOAuth(native: boolean): Promise<void> {
   }
 }
 
-const ensureNativeGoogleInitialized = (): void => {
+const ensureNativeGoogleInitialized = async (): Promise<void> => {
   if (!isNativeRuntime() || !hasNativeGoogleConfig()) {
     return;
   }
 
-  GoogleAuth.initialize({
-    clientId: appEnv.googleWebClientId,
-    scopes: ['profile', 'email'],
-    grantOfflineAccess: true,
-  });
+  if (!nativeGoogleInitPromise) {
+    nativeGoogleInitPromise = GoogleAuth.initialize({
+      clientId: appEnv.googleWebClientId,
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
+    }).catch((error) => {
+      nativeGoogleInitPromise = null;
+      throw error;
+    });
+  }
+
+  await nativeGoogleInitPromise;
 };
 
 export async function signOutNativeGoogle(): Promise<void> {
@@ -46,7 +54,7 @@ export async function signOutNativeGoogle(): Promise<void> {
     return;
   }
 
-  ensureNativeGoogleInitialized();
+  await ensureNativeGoogleInitialized();
 
   try {
     await GoogleAuth.signOut();
@@ -72,11 +80,13 @@ export async function signInWithGoogle(): Promise<void> {
   }
 
   if (native) {
-    ensureNativeGoogleInitialized();
+    await ensureNativeGoogleInitialized();
 
     try {
       const user = await GoogleAuth.signIn({
+        clientId: appEnv.googleWebClientId,
         scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
       });
       const idToken = user.authentication?.idToken;
 
@@ -139,4 +149,8 @@ export async function handleAuthCallbackUrl(url: string): Promise<boolean> {
   }
 
   return false;
+}
+
+export function __resetNativeGoogleInitForTest(): void {
+  nativeGoogleInitPromise = null;
 }

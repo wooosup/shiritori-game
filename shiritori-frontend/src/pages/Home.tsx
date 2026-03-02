@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import {
   MagnifyingGlassIcon,
   TrophyIcon,
@@ -235,13 +235,23 @@ export default function Home() {
       }
     };
 
-    const syncAuthenticatedState = async (sessionUser: User) => {
+    const syncAuthenticatedState = async (session: Session) => {
       if (isMounted.current) {
-        setUser(sessionUser);
+        setUser(session.user);
       }
 
+      const authHeaders = session.access_token
+        ? { headers: { Authorization: `Bearer ${session.access_token}` } }
+        : undefined;
+
       try {
-        const profileRes = await apiClient.get<ApiResponse<{ nickname: string | null }>>('/profiles/me');
+        let profileRes = await apiClient.get<ApiResponse<{ nickname: string | null }>>('/profiles/me', authHeaders);
+
+        if (profileRes.data.code !== 200) {
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          profileRes = await apiClient.get<ApiResponse<{ nickname: string | null }>>('/profiles/me', authHeaders);
+        }
+
         if (isMounted.current && profileRes.data.code === 200) {
           const myNick = profileRes.data.data.nickname;
           setNickname(myNick);
@@ -266,7 +276,7 @@ export default function Home() {
         const [sessionRes] = await Promise.allSettled([sessionPromise]);
 
         if (sessionRes.status === 'fulfilled' && sessionRes.value.data.session) {
-          await syncAuthenticatedState(sessionRes.value.data.session.user);
+          await syncAuthenticatedState(sessionRes.value.data.session);
         }
       } catch (error) {
         console.error('초기화 에러:', error);
@@ -287,7 +297,7 @@ export default function Home() {
       if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
         setIsLoggingIn(false);
         setLoginError(null);
-        void syncAuthenticatedState(session.user);
+        void syncAuthenticatedState(session);
         return;
       }
 

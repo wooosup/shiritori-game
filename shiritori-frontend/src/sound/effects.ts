@@ -167,14 +167,19 @@ export function installGlobalButtonClickSfx(): () => void {
     triggerButtonSfx(event);
   };
 
-  document.addEventListener('pointerdown', triggerButtonSfx, true);
-  document.addEventListener('touchstart', triggerButtonSfx, true);
-  document.addEventListener('click', triggerButtonSfx, true);
+  // 단일 포인터 이벤트만 사용해서 모바일/웹뷰에서 중복 재생을 방지한다.
+  if ('PointerEvent' in window) {
+    document.addEventListener('pointerdown', triggerButtonSfx, true);
+  } else {
+    document.addEventListener('click', triggerButtonSfx, true);
+  }
   document.addEventListener('keydown', onKeyDown, true);
   return () => {
-    document.removeEventListener('pointerdown', triggerButtonSfx, true);
-    document.removeEventListener('touchstart', triggerButtonSfx, true);
-    document.removeEventListener('click', triggerButtonSfx, true);
+    if ('PointerEvent' in window) {
+      document.removeEventListener('pointerdown', triggerButtonSfx, true);
+    } else {
+      document.removeEventListener('click', triggerButtonSfx, true);
+    }
     document.removeEventListener('keydown', onKeyDown, true);
   };
 }
