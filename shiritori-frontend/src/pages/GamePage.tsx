@@ -628,7 +628,7 @@ export default function GamePage() {
                     <div className="h-16 px-4 flex justify-between items-center border-b border-gray-50 dark:border-slate-700">
                         
                         {/* 좌측: 뒤로가기 + 레벨 표시 + 패스 버튼 */}
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                             <button onClick={handleQuit} className="p-2 -ml-2 text-gray-400 hover:text-red-500 transition active:scale-95">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -644,14 +644,14 @@ export default function GamePage() {
                                 onClick={handlePassClick}
                                 disabled={passCount <= 0 || loading || isGameOver || isPaused || resumeCountdown !== null}
                                 className={`
-                                    flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full transition-all border
+                                    h-10 min-w-[102px] flex items-center justify-center gap-1.5 px-3 rounded-full transition-all border
                                     ${passCount > 0 && !isPaused && resumeCountdown === null
-                                    ? 'bg-orange-50/70 border-orange-300 text-orange-700 hover:bg-orange-100 active:scale-95 shadow-[0_2px_8px_-2px_rgba(249,115,22,0.25)] dark:bg-[#2a2230] dark:border-orange-300/80 dark:text-orange-200 dark:hover:bg-[#35273d] dark:shadow-[0_0_0_1px_rgba(251,146,60,0.2),0_8px_20px_-10px_rgba(249,115,22,0.65)]'
-                                    : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-70 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500'}
+                                    ? 'bg-amber-50 border-amber-200 text-amber-700 active:scale-95 shadow-[0_6px_16px_-12px_rgba(245,158,11,0.9)] dark:bg-amber-900/40 dark:border-amber-700/70 dark:text-amber-200'
+                                    : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500'}
                                 `}
                             >
-                                <span className="text-xs font-black tracking-widest">PASS</span>
-                                <div className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-black ${passCount > 0 ? 'bg-white text-orange-600 shadow-sm dark:bg-orange-100/20 dark:text-orange-100 dark:ring-1 dark:ring-orange-300/45' : 'bg-gray-100 text-gray-400 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                <span className="text-[11px] font-black tracking-[0.06em]">패스</span>
+                                <div className={`w-5 h-5 flex items-center justify-center rounded-full text-[11px] font-black ${passCount > 0 ? 'bg-white text-amber-600 shadow-sm dark:bg-slate-900 dark:text-amber-200' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
                                     {passCount}
                                 </div>
                             </button>
@@ -663,15 +663,15 @@ export default function GamePage() {
                                 onClick={handlePauseToggle}
                                 disabled={!gameId || isGameOver || loading || resumeCountdown !== null}
                                 className={`
-                                    h-8 px-3 rounded-full text-[11px] font-black tracking-wider transition
+                                    h-10 min-w-[94px] px-3 rounded-full text-[11px] font-black tracking-[0.04em] transition border
                                     ${!gameId || isGameOver || loading || resumeCountdown !== null
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500'
                                         : isPaused
-                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 active:scale-95'
-                                            : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 active:scale-95'}
+                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 active:scale-95 dark:bg-emerald-900/40 dark:border-emerald-700/70 dark:text-emerald-200'
+                                            : 'bg-sky-50 border-sky-200 text-sky-700 active:scale-95 dark:bg-sky-900/40 dark:border-sky-700/70 dark:text-sky-200'}
                                 `}
                             >
-                                {isPaused ? '재개' : '일시정지'}
+                                {isPaused ? '재개하기' : '일시정지'}
                             </button>
 
                             {combo > 1 && (

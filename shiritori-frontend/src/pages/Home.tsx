@@ -121,6 +121,7 @@ export default function Home() {
   const [totalWords, setTotalWords] = useState<number>(0);
   const [bannerWords, setBannerWords] = useState<BannerWord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authResolved, setAuthResolved] = useState(false);
   const [isLoadingMyRank, setIsLoadingMyRank] = useState(false);
   const [totalWordsError, setTotalWordsError] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
@@ -234,39 +235,45 @@ export default function Home() {
       }
     };
 
-    const init = async () => {
-      const timer = setTimeout(() => {
-        if (isMounted.current) setLoading(false);
-      }, 1000);
+    const syncAuthenticatedState = async (sessionUser: User) => {
+      if (isMounted.current) {
+        setUser(sessionUser);
+      }
 
+      try {
+        const profileRes = await apiClient.get<ApiResponse<{ nickname: string | null }>>('/profiles/me');
+        if (isMounted.current && profileRes.data.code === 200) {
+          const myNick = profileRes.data.data.nickname;
+          setNickname(myNick);
+          if (!myNick) {
+            setShowNicknameModal(true);
+          }
+        }
+      } catch (error: unknown) {
+        if (getApiErrorStatus(error) === 401) {
+          handleLogout();
+          return;
+        }
+      }
+
+      await refreshMyRank();
+    };
+
+    const init = async () => {
       try {
         const sessionPromise = supabase.auth.getSession();
         await Promise.all([fetchWordCount(), fetchBannerWords(), fetchRankings()]);
         const [sessionRes] = await Promise.allSettled([sessionPromise]);
 
         if (sessionRes.status === 'fulfilled' && sessionRes.value.data.session) {
-          const session = sessionRes.value.data.session;
-          if (isMounted.current) setUser(session.user);
-
-          try {
-            const profileRes = await apiClient.get<ApiResponse<{ nickname: string | null }>>('/profiles/me');
-            if (isMounted.current && profileRes.data.code === 200) {
-              setNickname(profileRes.data.data.nickname);
-            }
-          } catch (error: unknown) {
-            if (getApiErrorStatus(error) === 401) {
-              handleLogout();
-              return;
-            }
-          }
-
-          await refreshMyRank();
+          await syncAuthenticatedState(sessionRes.value.data.session.user);
         }
       } catch (error) {
         console.error('초기화 에러:', error);
       } finally {
-        clearTimeout(timer);
-        if (isMounted.current) setLoading(false);
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
 
@@ -275,21 +282,20 @@ export default function Home() {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted.current) return;
 
-      if (event === 'SIGNED_IN' && session) {
+      setAuthResolved(true);
+
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
         setIsLoggingIn(false);
         setLoginError(null);
-        setUser(session.user);
-        apiClient
-          .get<ApiResponse<{ nickname: string | null }>>('/profiles/me')
-          .then(async (res) => {
-            if (isMounted.current && res.data.code === 200) {
-              const myNick = res.data.data.nickname;
-              setNickname(myNick);
-              if (!myNick) setShowNicknameModal(true);
-            }
-            await refreshMyRank();
-          })
-          .catch(() => {});
+        void syncAuthenticatedState(session.user);
+        return;
+      }
+
+      if (event === 'INITIAL_SESSION' && !session) {
+        setUser(null);
+        setNickname(null);
+        setMyRank(null);
+        return;
       }
 
       if (event === 'SIGNED_OUT') {
@@ -380,7 +386,7 @@ export default function Home() {
     navigate('/game', { state: { level } });
   };
 
-  if (loading) {
+  if (loading || !authResolved) {
     return <div className="flex h-[100dvh] items-center justify-center bg-[#F7F7F9] text-gray-700 dark:bg-slate-950 dark:text-slate-100">로딩 중...</div>;
   }
 
@@ -587,11 +593,8 @@ export default function Home() {
         <div className="flex h-14 items-center justify-between px-4">
           <img src="/logo.png" alt="しりとり" className="h-8 w-auto object-contain" />
 
-          <div className="flex items-center gap-2 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white px-2.5 py-1.5 shadow-[0_4px_16px_-10px_rgba(79,70,229,0.45)] dark:border-indigo-800 dark:from-indigo-900/70 dark:to-slate-900">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-black text-white dark:bg-indigo-500">
-              {displayNickname.charAt(0)}
-            </span>
-            <p className="max-w-[96px] truncate text-sm font-black text-indigo-900 dark:text-indigo-100">{displayNickname}</p>
+          <div className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <p className="max-w-[108px] truncate text-sm font-black text-gray-800 dark:text-slate-100">{displayNickname}</p>
           </div>
         </div>
       </header>
