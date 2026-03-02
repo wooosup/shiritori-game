@@ -33,7 +33,6 @@ public class ProfileService {
     private final AuthIdentityRemover authIdentityRemover;
     private final NicknameValidator nicknameValidator;
 
-    @Transactional(readOnly = true)
     public ProfileResponse getMyProfile(UUID userId) {
         Profile profile = findOrCreateProfile(userId);
         return ProfileResponse.of(profile);

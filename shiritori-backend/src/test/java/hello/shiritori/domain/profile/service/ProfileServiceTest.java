@@ -27,6 +27,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +80,17 @@ class ProfileServiceTest {
 
         Profile profile = profileRepository.findById(userId).orElseThrow();
         assertThat(profile.getNickname()).isEqualTo("newbie");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("신규 유저가 내 프로필 조회를 하면 프로필이 영속화된다.")
+    void getMyProfilePersistsProfileForNewUser() {
+        UUID userId = UUID.randomUUID();
+
+        profileService.getMyProfile(userId);
+
+        assertThat(profileRepository.findById(userId)).isPresent();
     }
 
     @Test
