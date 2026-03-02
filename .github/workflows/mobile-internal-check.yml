@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches:
+      - master
       - main
 
 jobs:
@@ -37,6 +38,8 @@ jobs:
         run: npm ci
       - name: Run frontend tests
         run: npm run test:run
+      - name: Run frontend lint
+        run: npm run lint
       - name: Build frontend
         run: npm run build
 
