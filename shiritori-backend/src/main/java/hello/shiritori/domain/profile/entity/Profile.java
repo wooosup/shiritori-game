@@ -1,5 +1,6 @@
 package hello.shiritori.domain.profile.entity;
 
+import hello.shiritori.domain.profile.policy.NicknameValidator;
 import hello.shiritori.global.exception.UserException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,8 +44,9 @@ public class Profile {
                 .build();
     }
 
-    public void updateNickname(String newNickname) {
+    public void updateNickname(String newNickname, NicknameValidator nicknameValidator) {
         validateNicknameFormat(newNickname);
+        nicknameValidator.validate(newNickname);
         validateNicknameCooldown();
 
         this.nickname = newNickname;

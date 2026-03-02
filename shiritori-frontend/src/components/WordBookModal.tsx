@@ -63,8 +63,9 @@ export default function WordBookModal({ isOpen, onClose }: Readonly<Props>) {
         } catch (error: any) {
             console.error(error);
             if (error.response?.status === 401) {
-                alert("로그인이 필요합니다.");
-                onClose();
+                setErrorMsg('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+                triggerShake();
+                return;
             }
         } finally {
             setLoading(false);

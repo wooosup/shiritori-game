@@ -1,61 +1,124 @@
-import { useEffect } from 'react';
-import {BrowserRouter, Routes, Route, useLocation} from 'react-router-dom';
-import ReactGA from 'react-ga4';
+import { lazy, Suspense, useEffect } from 'react';
+import { HashRouter, Route, Routes } from 'react-router-dom';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { supabase } from './api/axios';
 import { useAuthStore } from './stores/authStore';
+import { useSettingsStore } from './stores/settingsStore';
 import Home from './pages/Home';
-import LoginModal from './components/LoginModal';
-import GamePage from './pages/GamePage';
+import LegalDocumentPage from './pages/LegalDocumentPage';
+import { handleAuthCallbackUrl, isNativeRuntime } from './platform/auth';
+import { installGlobalButtonClickSfx } from './sound/effects';
 
-
-const RouteTracker = () => {
-    const location = useLocation();
-
-    useEffect(() => {
-        ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
-    }, [location]);
-
-    return null;
-};
+const GamePage = lazy(() => import('./pages/GamePage'));
 
 function App() {
-    const { setSession, closeLoginModal } = useAuthStore();
+  const { setSession } = useAuthStore();
+  const themePreference = useSettingsStore((state) => state.themePreference);
+  const resolvedTheme = useSettingsStore((state) => state.resolvedTheme);
+  const syncSystemTheme = useSettingsStore((state) => state.syncSystemTheme);
 
-    useEffect(() => {
-        ReactGA.initialize("G-E9JYF0HN3G");
+  useEffect(() => {
+    let disposeAppUrlListener: (() => void) | null = null;
+    const disposeButtonSfx = installGlobalButtonClickSfx();
 
-        // 1. 초기 세션 확인
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    if (isNativeRuntime()) {
+      CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
+        const consumed = await handleAuthCallbackUrl(url);
+        if (consumed) {
+          try {
+            await Browser.close();
+          } catch {
+            // noop
+          }
+          globalThis.location.hash = '#/';
+        }
+      })
+        .then((listener) => {
+          disposeAppUrlListener = () => {
+            void listener.remove();
+          };
+        })
+        .catch(() => {
+          // noop
         });
+    }
 
-        // 2. 인증 상태 변경 감지 (로그인/로그아웃 시 자동 실행)
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            if (session) {
-                closeLoginModal();
-            }
-        });
+    return () => {
+      subscription.unsubscribe();
+      disposeAppUrlListener?.();
+      disposeButtonSfx();
+    };
+  }, [setSession]);
 
-        return () => subscription.unsubscribe();
-    }, [setSession, closeLoginModal]);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
 
-    return (
-        <BrowserRouter>
-            <RouteTracker/>
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    syncSystemTheme(media.matches);
 
-            {/* 라우트 설정 */}
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/game" element={<GamePage />} />
-            </Routes>
+    const onMediaChange = (event: MediaQueryListEvent) => {
+      syncSystemTheme(event.matches);
+    };
 
-            {/* 로그인 팝업 (어디서든 뜰 수 있게 최상위에 배치) */}
-            <LoginModal />
-        </BrowserRouter>
-    );
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', onMediaChange);
+      return () => {
+        media.removeEventListener('change', onMediaChange);
+      };
+    }
+
+    media.addListener(onMediaChange);
+    return () => {
+      media.removeListener(onMediaChange);
+    };
+  }, [themePreference, syncSystemTheme]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const isDark = resolvedTheme === 'dark';
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+  }, [resolvedTheme]);
+
+  return (
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route
+          path="/legal/privacy"
+          element={<LegalDocumentPage title="개인정보처리방침" type="privacy" />}
+        />
+        <Route
+          path="/legal/account-deletion"
+          element={<LegalDocumentPage title="계정 삭제 안내" type="account-deletion" />}
+        />
+        <Route
+          path="/game"
+          element={(
+            <Suspense fallback={null}>
+              <GamePage />
+            </Suspense>
+          )}
+        />
+      </Routes>
+    </HashRouter>
+  );
 }
 
 export default App;

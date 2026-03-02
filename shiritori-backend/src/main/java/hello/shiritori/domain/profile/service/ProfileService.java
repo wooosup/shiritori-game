@@ -1,21 +1,37 @@
 package hello.shiritori.domain.profile.service;
 
+import hello.shiritori.domain.game.repository.GameActionIdempotencyRepository;
+import hello.shiritori.domain.game.repository.GameRepository;
+import hello.shiritori.domain.profile.port.AuthIdentityRemover;
 import hello.shiritori.domain.profile.dto.ProfileResponse;
 import hello.shiritori.domain.profile.entity.Profile;
+import hello.shiritori.domain.profile.policy.NicknameValidator;
+import hello.shiritori.domain.gameTurn.repository.GameTurnRepository;
+import hello.shiritori.domain.session.repository.UserSessionRepository;
+import hello.shiritori.domain.wordBook.repository.WordBookRepository;
 import hello.shiritori.global.exception.UserException;
 import hello.shiritori.global.exception.UserNotFound;
 import hello.shiritori.domain.profile.repository.ProfileRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@Slf4j
 @RequiredArgsConstructor
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
+    private final WordBookRepository wordBookRepository;
+    private final GameTurnRepository gameTurnRepository;
+    private final GameRepository gameRepository;
+    private final GameActionIdempotencyRepository gameActionIdempotencyRepository;
+    private final UserSessionRepository userSessionRepository;
+    private final AuthIdentityRemover authIdentityRemover;
+    private final NicknameValidator nicknameValidator;
 
     @Transactional(readOnly = true)
     public ProfileResponse getMyProfile(UUID userId) {
@@ -27,7 +43,22 @@ public class ProfileService {
         Profile profile = findProfileOrThrow(userId);
         String normalizedNickname = normalizeNickname(nickname);
         validateNicknameNotDuplicate(profile, normalizedNickname);
-        profile.updateNickname(normalizedNickname);
+        profile.updateNickname(normalizedNickname, nicknameValidator);
+    }
+
+    public void deleteMyAccount(UUID userId) {
+        // Child tables first, then owner rows.
+        gameTurnRepository.deleteAllByUserId(userId);
+        gameRepository.deleteAllByUserId(userId);
+        wordBookRepository.deleteAllByUserId(userId);
+        gameActionIdempotencyRepository.deleteAllByUserId(userId);
+        userSessionRepository.deleteAllByUserId(userId);
+        profileRepository.deleteByUserId(userId);
+        try {
+            authIdentityRemover.deleteIdentity(userId);
+        } catch (RuntimeException e) {
+            log.warn("외부 인증 계정 삭제 실패(userId={}) - 로컬 계정 삭제는 완료", userId, e);
+        }
     }
 
     private Profile findOrCreateProfile(UUID userId) {

@@ -6,6 +6,7 @@ import hello.shiritori.global.api.ApiResponse;
 import hello.shiritori.domain.profile.service.ProfileService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,13 @@ public class ProfileController {
         UUID userId = UUID.fromString(jwt.getSubject());
         profileService.updateProfile(userId, request.getNickname());
         return ApiResponse.ok("닉네임이 설정되었습니다.", null);
+    }
+
+    @DeleteMapping("/me")
+    public ApiResponse<Void> deleteMyAccount(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        profileService.deleteMyAccount(userId);
+        return ApiResponse.ok("계정 데이터가 삭제되었습니다.", null);
     }
 
 }

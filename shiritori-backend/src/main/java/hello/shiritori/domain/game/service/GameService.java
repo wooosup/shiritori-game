@@ -16,9 +16,11 @@ import hello.shiritori.domain.game.entity.JlptLevel;
 import hello.shiritori.domain.game.repository.GameRepository;
 import hello.shiritori.domain.profile.entity.Profile;
 import hello.shiritori.domain.profile.repository.ProfileRepository;
+import hello.shiritori.domain.ranking.service.RankingService;
 import hello.shiritori.domain.word.entity.Word;
 import hello.shiritori.domain.word.repository.WordRepository;
 import hello.shiritori.global.exception.DuplicateWordException;
+import hello.shiritori.global.exception.GameAccessDeniedException;
 import hello.shiritori.global.exception.GameAlreadyException;
 import hello.shiritori.global.exception.GameException;
 import hello.shiritori.global.exception.GameLevelException;
@@ -40,7 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class GameService {
 
     private static final long TIME_LIMIT_SECONDS = 20;
-    private static final String SIGNAL_TIME_OVER = "TIME_OVER_SIGNAL";
     private static final String SPEAKER_AI = "AI";
     private static final String SPEAKER_USER = "USER";
 
@@ -48,6 +49,7 @@ public class GameService {
     private final GameTurnService gameTurnService;
     private final WordRepository wordRepository;
     private final ProfileRepository profileRepository;
+    private final RankingService rankingService;
     private final WordFinder wordFinder;
     private final ShiritoriValidator shiritoriValidator;
 
@@ -68,13 +70,13 @@ public class GameService {
         );
     }
 
-    public TurnResponse playTurn(Long gameId, TurnRequest request) {
-        Game game = findGameOrThrow(gameId);
+    public TurnResponse playTurn(UUID userId, Long gameId, TurnRequest request) {
+        Game game = findGameForUserForUpdateOrThrow(userId, gameId);
         validateGameIsPlaying(game);
 
         String userInput = request.getWord().trim();
 
-        if (isTimeOver(game, userInput)) {
+        if (isTimeOver(game)) {
             return loseAndFinishGame(game, TIME_OVER, userInput, "시간 초과! 게임이 종료되었습니다.");
         }
 
@@ -95,8 +97,8 @@ public class GameService {
         return processAiTurn(game, userWord);
     }
 
-    public TurnResponse passTurn(Long gameId) {
-        Game game = findGameOrThrow(gameId);
+    public TurnResponse passTurn(UUID userId, Long gameId) {
+        Game game = findGameForUserForUpdateOrThrow(userId, gameId);
         validateGameIsPlaying(game);
         validateHasPassCount(game);
 
@@ -111,12 +113,18 @@ public class GameService {
         return TurnResponse.ofPass(game, nextWord);
     }
 
-    public void quitGame(Long gameId) {
-        Game game = findGameOrThrow(gameId);
+    public void quitGame(UUID userId, Long gameId) {
+        Game game = findGameForUserForUpdateOrThrow(userId, gameId);
 
         if (game.getStatus() == PLAYING) {
-            game.finish(GAME_OVER);
+            finishAndRefreshRanking(game, GAME_OVER);
         }
+    }
+
+    public TurnResponse timeoutGame(UUID userId, Long gameId) {
+        Game game = findGameForUserForUpdateOrThrow(userId, gameId);
+        validateGameIsPlaying(game);
+        return loseAndFinishGame(game, TIME_OVER, null, "시간 초과! 게임이 종료되었습니다.");
     }
 
     private Profile findProfileOrThrow(UUID userId) {
@@ -127,6 +135,19 @@ public class GameService {
     private Game findGameOrThrow(Long gameId) {
         return gameRepository.findById(gameId)
                 .orElseThrow(GameNotFound::new);
+    }
+
+    private Game findGameForUpdateOrThrow(Long gameId) {
+        return gameRepository.findByIdForUpdate(gameId)
+                .orElseThrow(GameNotFound::new);
+    }
+
+    private Game findGameForUserForUpdateOrThrow(UUID userId, Long gameId) {
+        Game game = findGameForUpdateOrThrow(gameId);
+        if (game.getUser() == null || !game.getUser().getId().equals(userId)) {
+            throw new GameAccessDeniedException();
+        }
+        return game;
     }
 
     private Game createAndSaveGame(Profile profile, JlptLevel level) {
@@ -180,8 +201,8 @@ public class GameService {
                 .orElseThrow(() -> new WordException("AI도 이을 단어를 못 찾았습니다. (무승부?)"));
     }
 
-    private boolean isTimeOver(Game game, String input) {
-        return SIGNAL_TIME_OVER.equals(input) || game.isTimeOut(TIME_LIMIT_SECONDS);
+    private boolean isTimeOver(Game game) {
+        return game.isTimeOut(TIME_LIMIT_SECONDS);
     }
 
     private void validateUserMove(Game game, Word userWord) {
@@ -211,13 +232,20 @@ public class GameService {
     }
 
     private TurnResponse winAndFinishGame(Game game, Word userWord) {
-        game.finish(WIN);
+        finishAndRefreshRanking(game, WIN);
         return TurnResponse.ofUserWin(game, userWord);
     }
 
     private TurnResponse loseAndFinishGame(Game game, GameStatus status, String word, String message) {
-        game.finish(status);
+        finishAndRefreshRanking(game, status);
         return TurnResponse.ofUserLose(game, word, message);
+    }
+
+    private void finishAndRefreshRanking(Game game, GameStatus status) {
+        game.finish(status);
+        if (game.getStatus() != PLAYING) {
+            rankingService.refreshRankingSnapshot();
+        }
     }
 
 }

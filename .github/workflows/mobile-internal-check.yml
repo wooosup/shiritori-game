@@ -1,0 +1,65 @@
+name: mobile-internal-check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shiritori-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Run backend tests
+        run: ./gradlew test
+
+  frontend-test-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shiritori-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: shiritori-frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run frontend tests
+        run: npm run test:run
+      - name: Build frontend
+        run: npm run build
+
+  mobile-env-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shiritori-frontend
+    env:
+      CI: 'true'
+      VITE_API_URL: https://example.com/api
+      VITE_SUPABASE_URL: https://dummy-project.supabase.co
+      VITE_SUPABASE_ANON_KEY: dummy-anon-key
+      VITE_GOOGLE_WEB_CLIENT_ID: ci-client-id.apps.googleusercontent.com
+      VITE_GOOGLE_ANDROID_CLIENT_ID: ci-android-client-id.apps.googleusercontent.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: shiritori-frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate mobile env contract
+        run: npm run mobile:check-env:strict

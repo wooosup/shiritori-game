@@ -47,7 +47,7 @@ public class TurnResponse {
                 .aiReading(aiWord.getReading())
                 .aiMeaning(aiWord.getMeaning())
                 .currentScore(game.getScore())
-                .currentCombo(game.getMaxCombo())
+                .currentCombo(game.getCurrentCombo())
                 .remainingPass(game.getPassCount())
                 .message("AI가 '" + aiWord.getWord() + "'(으)로 받아쳤습니다!")
                 .build();
@@ -60,7 +60,7 @@ public class TurnResponse {
                 .userReading(null)
                 .aiWord(null)
                 .currentScore(game.getScore())
-                .currentCombo(game.getMaxCombo())
+                .currentCombo(game.getCurrentCombo())
                 .remainingPass(game.getPassCount())
                 .message(message)
                 .build();
@@ -73,7 +73,7 @@ public class TurnResponse {
                 .userReading(word.getReading())
                 .aiWord(null)
                 .currentScore(game.getScore())
-                .currentCombo(game.getMaxCombo())
+                .currentCombo(game.getCurrentCombo())
                 .remainingPass(game.getPassCount())
                 .message("AI가 항복했습니다! 당신의 승리입니다! 🎉")
                 .build();
@@ -88,7 +88,7 @@ public class TurnResponse {
                 .aiReading(aiWord.getReading())
                 .aiMeaning(aiWord.getMeaning())
                 .currentScore(game.getScore())
-                .currentCombo(game.getMaxCombo())
+                .currentCombo(game.getCurrentCombo())
                 .remainingPass(game.getPassCount())
                 .message("PASS 사용! AI가 '" + aiWord.getWord() + "'(으)로 이어갑니다.")
                 .build();

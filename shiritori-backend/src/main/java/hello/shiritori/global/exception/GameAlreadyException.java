@@ -7,7 +7,7 @@ public class GameAlreadyException extends ShiritoriException{
     private static final String MESSAGE = "이미 종료된 게임입니다.";
 
     public GameAlreadyException() {
-        super(MESSAGE, BAD_REQUEST);
+        super(MESSAGE, BAD_REQUEST, ErrorCode.GAME_ALREADY_FINISHED);
     }
 
 }

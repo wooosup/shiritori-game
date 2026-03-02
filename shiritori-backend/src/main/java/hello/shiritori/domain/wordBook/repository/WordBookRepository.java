@@ -6,6 +6,7 @@ import hello.shiritori.domain.wordBook.entity.WordBook;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,5 +18,9 @@ public interface WordBookRepository extends JpaRepository<WordBook, Long> {
     List<WordBook> findAllByUserId(@Param("userId") UUID userId);
 
     List<WordBook> findTop10ByProfileIdOrderByCreatedAtDesc(UUID profileId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from WordBook wb where wb.profile.id = :userId")
+    int deleteAllByUserId(@Param("userId") UUID userId);
 
 }

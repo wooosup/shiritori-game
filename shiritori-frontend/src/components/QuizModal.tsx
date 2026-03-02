@@ -20,6 +20,7 @@ export default function QuizModal({ isOpen, onClose }: Readonly<Props>) {
     const [loading, setLoading] = useState(false);
     const [finished, setFinished] = useState(false);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -34,19 +35,20 @@ export default function QuizModal({ isOpen, onClose }: Readonly<Props>) {
         setScore(0);
         setFinished(false);
         setSelectedOption(null);
-        // 🗑️ setIsCorrect(null); 삭제
+        setFetchError(null);
     };
 
     const fetchQuiz = async () => {
         setLoading(true);
+        setFetchError(null);
         try {
             const res = await apiClient.get('/wordBooks/quiz');
             if (res.data.code === 200) {
                 setQuizzes(res.data.data);
             }
         } catch (error: any) {
-            alert(error.response?.data?.message || "단어장이 비어있습니다!");
-            onClose();
+            setQuizzes([]);
+            setFetchError(error.response?.data?.message || '단어장이 비어있습니다!');
         } finally {
             setLoading(false);
         }
@@ -83,6 +85,25 @@ export default function QuizModal({ isOpen, onClose }: Readonly<Props>) {
                     <div className="flex-1 flex flex-col items-center justify-center">
                         <div className="animate-spin text-4xl mb-4">🌀</div>
                         <p className="font-bold text-gray-500">퀴즈 생성 중...</p>
+                    </div>
+                ) : fetchError ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                        <h2 className="text-xl font-black text-gray-800 mb-2">퀴즈를 불러오지 못했어요</h2>
+                        <p className="text-sm text-red-500 mb-6">{fetchError}</p>
+                        <div className="w-full grid grid-cols-2 gap-2">
+                            <button
+                                onClick={() => fetchQuiz()}
+                                className="py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition"
+                            >
+                                다시 시도
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="py-3 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition"
+                            >
+                                닫기
+                            </button>
+                        </div>
                     </div>
                 ) : finished ? (
                     // 결과 화면

@@ -20,7 +20,7 @@ class GameTest {
         
         //then
         assertThat(game.getMaxCombo()).isEqualTo(1);
-        assertThat(game.getScore()).isEqualTo(30);
+        assertThat(game.getScore()).isEqualTo(26);
     }
 
     @Test
@@ -33,7 +33,7 @@ class GameTest {
         game.applyCorrectAnswer(null);
 
         // then
-        assertThat(game.getScore()).isEqualTo(30);
+        assertThat(game.getScore()).isEqualTo(26);
         assertThat(game.getMaxCombo()).isEqualTo(1);
     }
 
@@ -49,6 +49,22 @@ class GameTest {
         // then
         assertThat(game.getScore()).isEqualTo(30);
         assertThat(game.getMaxCombo()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("ALL 레벨에서는 단어 난이도가 점수에 반영되지만 격차는 완만하다.")
+    void applyCorrectAnswerWithAllLevelAndWordDifficulty() {
+        // given
+        Game easyWordGame = Game.create(null, ALL);
+        Game hardWordGame = Game.create(null, ALL);
+
+        // when
+        easyWordGame.applyCorrectAnswer(N5);
+        hardWordGame.applyCorrectAnswer(JlptLevel.N1);
+
+        // then
+        assertThat(hardWordGame.getScore()).isGreaterThan(easyWordGame.getScore());
+        assertThat(hardWordGame.getScore() - easyWordGame.getScore()).isEqualTo(16);
     }
 
     @Test

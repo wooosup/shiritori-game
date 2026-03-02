@@ -34,6 +34,8 @@ public class GameTurnService {
     }
 
     private int calculateNextTurnNumber(Game game) {
-        return (int) gameTurnRepository.countByGame(game) + 1;
+        return gameTurnRepository.findTopByGameOrderByTurnNumberDesc(game)
+                .map(GameTurn::getTurnNumber)
+                .orElse(0) + 1;
     }
 }

@@ -28,10 +28,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Game {
 
-    public static final int N1_SCORE = 100;
-    public static final int N2_SCORE = 80;
-    public static final int N3_SCORE = 50;
-    public static final int DEFAULT_SCORE = 20;
+    public static final int N1_BASE_SCORE = 42;
+    public static final int N2_BASE_SCORE = 38;
+    public static final int N3_BASE_SCORE = 34;
+    public static final int N4_BASE_SCORE = 30;
+    public static final int N5_BASE_SCORE = 26;
+    public static final int DEFAULT_BASE_SCORE = 30;
+    public static final int EARLY_COMBO_STEP_SCORE = 6;
+    public static final int LATE_COMBO_STEP_SCORE = 3;
+    public static final int EARLY_COMBO_BONUS_LIMIT = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -94,10 +99,10 @@ public class Game {
                 .build();
     }
 
-    public void applyCorrectAnswer(JlptLevel level) {
+    public void applyCorrectAnswer(JlptLevel wordLevel) {
         validateActive();
         incrementCombo();
-        addScore(level);
+        addScore(wordLevel);
         updateLastTurnTime();
     }
 
@@ -132,23 +137,35 @@ public class Game {
         }
     }
 
-    private void addScore(JlptLevel level) {
-        score += calculatePoints(level);
+    private void addScore(JlptLevel wordLevel) {
+        score += calculateBasePoints(wordLevel) + calculateComboBonus();
     }
 
 
-    private int calculatePoints(JlptLevel level) {
-        if (level == null) {
-            return DEFAULT_SCORE + (this.currentCombo) * 10;
-        }
-
-        int base = switch (level) {
-            case N1 -> N1_SCORE;
-            case N2 -> N2_SCORE;
-            case N3 -> N3_SCORE;
-            default -> DEFAULT_SCORE;
+    private int calculateBasePoints(JlptLevel wordLevel) {
+        JlptLevel scoringLevel = resolveScoringLevel(wordLevel);
+        return switch (scoringLevel) {
+            case N1 -> N1_BASE_SCORE;
+            case N2 -> N2_BASE_SCORE;
+            case N3 -> N3_BASE_SCORE;
+            case N4 -> N4_BASE_SCORE;
+            case N5 -> N5_BASE_SCORE;
+            default -> DEFAULT_BASE_SCORE;
         };
-        return base + (this.currentCombo) * 10;
+    }
+
+    private JlptLevel resolveScoringLevel(JlptLevel wordLevel) {
+        if (this.level == null || this.level == JlptLevel.ALL) {
+            return wordLevel == null ? JlptLevel.ALL : wordLevel;
+        }
+        return this.level;
+    }
+
+    private int calculateComboBonus() {
+        int streak = Math.max(0, this.currentCombo - 1);
+        int earlyBonus = Math.min(streak, EARLY_COMBO_BONUS_LIMIT) * EARLY_COMBO_STEP_SCORE;
+        int lateBonus = Math.max(0, streak - EARLY_COMBO_BONUS_LIMIT) * LATE_COMBO_STEP_SCORE;
+        return earlyBonus + lateBonus;
     }
 
     private void validateActive() {

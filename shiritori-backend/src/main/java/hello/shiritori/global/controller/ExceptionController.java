@@ -5,6 +5,7 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 import hello.shiritori.global.api.ApiResponse;
+import hello.shiritori.global.exception.ErrorCode;
 import hello.shiritori.global.exception.ShiritoriException;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,14 +31,13 @@ public class ExceptionController {
             validationErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
 
-        return ApiResponse.fail(BAD_REQUEST, "입력값이 올바르지 않습니다.", validationErrors);
+        return ApiResponse.fail(BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "입력값이 올바르지 않습니다.", validationErrors);
     }
 
     @ExceptionHandler(ShiritoriException.class)
     public ResponseEntity<ApiResponse<Void>> shiritoriException(ShiritoriException e) {
         log.error("비즈니스 오류: {}", e.getMessage());
-
-        ApiResponse<Void> response = ApiResponse.fail(e.getStatus(), e.getMessage());
+        ApiResponse<Void> response = ApiResponse.fail(e.getStatus(), e.getErrorCode(), e.getMessage());
         return ResponseEntity.status(e.getStatus()).body(response);
     }
 
@@ -45,14 +45,14 @@ public class ExceptionController {
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> generalServerError(Exception e) {
         log.error("서버 오류: {}", e.getMessage(), e);
-        return ApiResponse.fail(INTERNAL_SERVER_ERROR, "서버에 오류가 발생했습니다.");
+        return ApiResponse.fail(INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_SERVER_ERROR, "서버에 오류가 발생했습니다.");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(NOT_FOUND)
     public ApiResponse<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("잘못된 인자 오류: {}", e.getMessage(), e);
-        return ApiResponse.fail(NOT_FOUND, e.getMessage());
+        return ApiResponse.fail(NOT_FOUND, ErrorCode.GAME_NOT_FOUND, e.getMessage());
     }
 
 }

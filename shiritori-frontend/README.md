@@ -1,48 +1,72 @@
-# Shiritori Frontend
+# Shiritori Frontend (App-First)
 
-Vite + React 기반 프론트엔드입니다. 모바일 패키징은 Capacitor를 사용합니다.
+Vite + React 기반 클라이언트이며, 운영 기준은 Android 앱입니다.
 
-## Capacitor 고정 값 (Release 기준)
+## 앱 고정 설정
 
-- **App Name**: `Shiritori Game`
-- **App ID**: `com.shiritori.game`
-- **webDir**: `dist` (Vite 빌드 산출물)
+- App Name: `Shiritori Game`
+- App ID: `com.shiritori.game`
+- webDir: `dist`
+- OAuth Redirect: `shiritori://auth/callback`
 
-> 위 값은 릴리즈 문서(`docs/release-mobile.md`)와 동일하게 유지합니다.
-
-## 초기 세팅
+## 로컬 개발
 
 ```bash
 npm install
-npx cap add android
-npx cap add ios
+npm run dev
 ```
 
-## 표준 빌드 루틴
-
-웹 빌드 → Capacitor 동기화 → 네이티브 빌드 순서를 스크립트로 제공합니다.
+## 테스트/빌드
 
 ```bash
+npm run test:run
+npm run build
+```
+
+## 모바일 빌드
+
+```bash
+npm run mobile:check-env
 npm run android:build
-npm run ios:build
 ```
 
-공통으로 웹 빌드/동기화만 수행하려면:
+필수 환경 변수:
 
 ```bash
-npm run mobile:build
+export VITE_API_URL="https://<backend-domain>/api"
+export VITE_SUPABASE_URL="https://<project>.supabase.co"
+export VITE_SUPABASE_ANON_KEY="<anon-key>"
+export VITE_GOOGLE_WEB_CLIENT_ID="<google-web-client-id>.apps.googleusercontent.com"
+export VITE_GOOGLE_ANDROID_CLIENT_ID="<google-android-client-id>.apps.googleusercontent.com"
+export ANDROID_KEYSTORE_PATH="/absolute/path/to/release-keystore.jks" # release only
+export ANDROID_KEYSTORE_PASSWORD="<keystore-password>"                 # release only
+export ANDROID_KEY_ALIAS="<key-alias>"                                 # release only
+export ANDROID_KEY_PASSWORD="<key-password>"                           # release only
 ```
 
-## Render API 연결 점검
+`localhost`, `example.supabase.co`, `public-anon-key` 값은 릴리즈에서 차단됩니다.
 
-환경별 API Health 체크 스크립트:
+## 내부 테스트 릴리즈
 
 ```bash
-npm run api:check:dev
-npm run api:check:prod
+npm run android:release
 ```
 
-- `api:check:dev`: `VITE_API_URL_DEV` → 없으면 `VITE_API_URL` → 없으면 `http://localhost:8080/api`
-- `api:check:prod`: `VITE_API_URL_PROD` → 없으면 `VITE_API_URL`
+참고:
+- `android:release`는 release signing env가 없으면 실패합니다.
 
-`/api/healthz` 엔드포인트를 호출해 상태를 확인합니다.
+세부 절차는 `docs/internal-testing-release.md` 참고.
+
+## Google Play 제출 문서
+
+아래 문서를 기준으로 Play Console 항목을 작성합니다.
+
+1. `docs/play-store-upload-checklist.md`
+2. `docs/play-store/data-safety-matrix.md`
+3. `docs/play-store/privacy-policy-checklist.md`
+4. `docs/play-store/app-access-for-review.md`
+
+정책 페이지(정적 파일):
+
+1. `public/legal/privacy-ko.html`
+2. `public/legal/account-deletion-ko.html`

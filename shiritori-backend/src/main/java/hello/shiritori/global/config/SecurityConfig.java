@@ -1,5 +1,9 @@
 package hello.shiritori.global.config;
 
+import hello.shiritori.global.security.RequestContextLoggingFilter;
+import hello.shiritori.global.security.RestAccessDeniedHandler;
+import hello.shiritori.global.security.RestAuthenticationEntryPoint;
+import hello.shiritori.global.security.SessionTrackingFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
@@ -25,6 +30,21 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
 
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
+    private final SessionTrackingFilter sessionTrackingFilter;
+    private final RequestContextLoggingFilter requestContextLoggingFilter;
+
+    public SecurityConfig(RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+                          RestAccessDeniedHandler restAccessDeniedHandler,
+                          SessionTrackingFilter sessionTrackingFilter,
+                          RequestContextLoggingFilter requestContextLoggingFilter) {
+        this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+        this.restAccessDeniedHandler = restAccessDeniedHandler;
+        this.sessionTrackingFilter = sessionTrackingFilter;
+        this.requestContextLoggingFilter = requestContextLoggingFilter;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -32,14 +52,27 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/games/**", "/api/profiles/**", "/api/wordBooks/**")
+                        .requestMatchers(
+                                "/api/games/**",
+                                "/api/profiles/**",
+                                "/api/wordBooks/**",
+                                "/api/ranks/me",
+                                "/api/sessions/**"
+                        )
                         .authenticated()
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.decoder(jwtDecoder()))
                 );
+
+        http.addFilterAfter(sessionTrackingFilter, BearerTokenAuthenticationFilter.class);
+        http.addFilterAfter(requestContextLoggingFilter, SessionTrackingFilter.class);
         return http.build();
     }
 

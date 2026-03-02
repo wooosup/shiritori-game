@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shiritori 계정 삭제 안내</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1f2a44;
+        --muted: #5e6880;
+        --line: #d9dfef;
+        --brand: #4a47d5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      main {
+        max-width: 840px;
+        margin: 0 auto;
+        padding: 24px 16px 56px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 14px;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        color: var(--brand);
+        font-size: 1.05rem;
+      }
+      p,
+      li {
+        margin: 0 0 8px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+      ol {
+        margin: 8px 0 0 20px;
+        padding: 0;
+      }
+      .date {
+        color: var(--text);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h1>Shiritori 계정 삭제 안내</h1>
+        <p class="date">최종 개정일: 2026-03-02</p>
+      </section>
+
+      <section class="card">
+        <h2>1. 앱에서 계정 삭제하는 방법</h2>
+        <ol>
+          <li>앱 로그인 후 홈 화면 우상단 `옵션`을 엽니다.</li>
+          <li>`계정 탈퇴`를 선택합니다.</li>
+          <li>확인 절차를 완료하면 계정 삭제가 진행됩니다.</li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2>2. 삭제되는 항목</h2>
+        <ul>
+          <li>인증 계정(Supabase Auth 사용자 계정)</li>
+          <li>프로필(닉네임), 게임 기록, 단어장 데이터</li>
+          <li>세션/토큰 등 로그인 상태 정보</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>3. 예외 및 보관</h2>
+        <ul>
+          <li>법령상 보관 의무가 있는 최소 정보는 해당 기간 동안 보관될 수 있습니다.</li>
+          <li>보안/장애 분석용 최소 운영 로그는 내부 정책에 따라 일정 기간 후 삭제됩니다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>4. 처리 기한 및 문의</h2>
+        <p>일반적으로 요청 즉시 또는 합리적인 기간 내 삭제가 완료됩니다.</p>
+        <p>
+          문의: <strong>useop0821@gmail.com</strong><br />
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
