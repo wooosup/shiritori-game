@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { apiClient } from '../api/axios';
+import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
 import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
 import { playErrorSfx } from '../sound/effects';
@@ -142,15 +143,27 @@ export default function GamePage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isGameStarted = useRef(false);
     const { validateWord } = useShiritoriValidation(history);
 
-    const clearSnapshot = () => {
+    const clearSnapshot = useCallback(() => {
         if (typeof window === 'undefined') return;
         window.localStorage.removeItem(SNAPSHOT_STORAGE_KEY);
-    };
+    }, []);
 
-    const pauseGame = (reason: PauseReason) => {
+    const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+        setToast({ show: true, msg, type });
+        if (toastTimerRef.current) {
+            clearTimeout(toastTimerRef.current);
+        }
+        toastTimerRef.current = setTimeout(() => {
+            setToast({ show: false, msg: '', type: 'success' });
+            toastTimerRef.current = null;
+        }, 2000);
+    }, []);
+
+    const pauseGame = useCallback((reason: PauseReason) => {
         if (isGameOver || !gameId || isPaused) return;
         setIsPaused(true);
         setPauseReason(reason);
@@ -158,12 +171,12 @@ export default function GamePage() {
         if (reason === 'background') {
             showToast('앱이 백그라운드로 전환되어 일시정지되었어요.', 'error');
         }
-    };
+    }, [gameId, isGameOver, isPaused, showToast]);
 
-    const startResumeCountdown = () => {
+    const startResumeCountdown = useCallback(() => {
         if (!isPaused || isGameOver || loading) return;
         setResumeCountdown(3);
-    };
+    }, [isGameOver, isPaused, loading]);
 
     const handlePauseToggle = () => {
         if (isGameOver || loading || !gameId) return;
@@ -182,7 +195,7 @@ export default function GamePage() {
         inputRef.current?.focus();
     };
 
-    const restoreSnapshot = (): boolean => {
+    const restoreSnapshot = useCallback((): boolean => {
         if (typeof window === 'undefined') return false;
         const snapshot = parseSnapshot(window.localStorage.getItem(SNAPSHOT_STORAGE_KEY));
         if (!snapshot) {
@@ -210,7 +223,63 @@ export default function GamePage() {
         showToast('이전 게임을 복구했어요.', 'success');
 
         return true;
-    };
+    }, [clearSnapshot, level, showToast]);
+
+    const addMessage = useCallback((msg: Omit<Message, 'id'> & { id?: number }) => {
+        setHistory((prev) => [...prev, { ...msg, id: msg.id || Date.now() }]);
+    }, []);
+
+    const startGame = useCallback(async () => {
+        try {
+            setLoading(true);
+            setIsGameOver(false);
+            setGameResult(null);
+            setErrorMessage(null);
+            setHistory([]);
+            setInputWord('');
+            setIsPaused(false);
+            setPauseReason(null);
+            setResumeCountdown(null);
+            clearSnapshot();
+
+            const res = await apiClient.post('/games/start', { level });
+            if (res.data.code === 200) {
+                const data = res.data.data;
+                setGameId(data.gameId);
+                setCombo(0);
+                setScore(0);
+                setPassCount(3);
+                setTimeLeft(TURN_TIME_LIMIT);
+                addMessage({
+                    id: Date.now(),
+                    sender: 'AI',
+                    word: data.word,
+                    reading: data.startReading,
+                    meaning: data.meaning,
+                });
+                setTimeout(() => inputRef.current?.focus(), 10);
+            }
+        } catch {
+            showToast('게임 시작에 실패해 홈으로 이동합니다.', 'error');
+            setTimeout(() => {
+                navigate('/');
+            }, 800);
+        } finally {
+            setLoading(false);
+        }
+    }, [addMessage, clearSnapshot, level, navigate, showToast]);
+
+    const handleTimeOver = useCallback(async () => {
+        if (isGameOver) return;
+        setIsGameOver(true);
+        setGameResult({ type: 'LOSE', msg: '⏰ 시간 초과!' });
+        clearSnapshot();
+        try {
+            if (gameId) await apiClient.post(`/games/${gameId}/timeout`);
+        } catch (e) {
+            console.error("시간 초과 처리 에러", e);
+        }
+    }, [clearSnapshot, gameId, isGameOver]);
 
     // --- 초기화 ---
     useEffect(() => {
@@ -226,7 +295,7 @@ export default function GamePage() {
                 setShowTutorial(true);
             }
         }
-    }, []);
+    }, [restoreSnapshot, startGame]);
 
     // --- 뷰포트 대응 ---
     useEffect(() => {
@@ -274,7 +343,7 @@ export default function GamePage() {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [isGameOver, gameId, isPaused, resumeCountdown]);
+    }, [gameId, handleTimeOver, isGameOver, isPaused, resumeCountdown]);
 
     // --- 스크롤 ---
     useEffect(() => {
@@ -290,6 +359,14 @@ export default function GamePage() {
             return () => clearTimeout(timer);
         }
     }, [errorMessage]);
+
+    useEffect(() => {
+        return () => {
+            if (toastTimerRef.current) {
+                clearTimeout(toastTimerRef.current);
+            }
+        };
+    }, []);
 
     // --- 복귀 카운트다운 ---
     useEffect(() => {
@@ -351,7 +428,7 @@ export default function GamePage() {
             document.removeEventListener('visibilitychange', handleVisibility);
             disposeNativeListener?.();
         };
-    }, [isPaused, pauseReason, resumeCountdown, isGameOver, gameId, loading]);
+    }, [isGameOver, isPaused, pauseGame, pauseReason, resumeCountdown, startResumeCountdown]);
 
     // --- 진행 중 게임 스냅샷 저장 ---
     useEffect(() => {
@@ -375,7 +452,7 @@ export default function GamePage() {
         };
 
         window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
-    }, [level, gameId, history, passCount, timeLeft, score, combo, inputWord, isGameOver]);
+    }, [clearSnapshot, level, gameId, history, passCount, timeLeft, score, combo, inputWord, isGameOver]);
 
     const handleSaveWord = async (word: string) => {
         try {
@@ -383,58 +460,13 @@ export default function GamePage() {
             if (res.data.code === 200) {
                 showToast("단어장에 저장했습니다.", 'success');
             }
-        } catch (error: any) {
-            const msg = error.response?.data?.message || "저장에 실패했습니다.";
+        } catch (error: unknown) {
+            const msg = getApiErrorMessage(error, "저장에 실패했습니다.");
             if (msg.includes("이미")) {
                 showToast("이미 단어장에 있는 단어입니다.", 'error');
             } else {
                 showToast(msg, 'error');
             }
-        }
-    };
-
-    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-        setToast({ show: true, msg, type });
-        setTimeout(() => setToast({ show: false, msg: '', type: 'success' }), 2000);
-    };
-
-    const startGame = async () => {
-        try {
-            setLoading(true);
-            setIsGameOver(false);
-            setGameResult(null);
-            setErrorMessage(null);
-            setHistory([]);
-            setInputWord('');
-            setIsPaused(false);
-            setPauseReason(null);
-            setResumeCountdown(null);
-            clearSnapshot();
-
-            const res = await apiClient.post('/games/start', { level });
-            if (res.data.code === 200) {
-                const data = res.data.data;
-                setGameId(data.gameId);
-                setCombo(0);
-                setScore(0);
-                setPassCount(3);
-                setTimeLeft(TURN_TIME_LIMIT);
-                addMessage({
-                    id: Date.now(),
-                    sender: 'AI',
-                    word: data.word,
-                    reading: data.startReading,
-                    meaning: data.meaning,
-                });
-                setTimeout(() => inputRef.current?.focus(), 10);
-            }
-        } catch (error) {
-            showToast('게임 시작에 실패해 홈으로 이동합니다.', 'error');
-            setTimeout(() => {
-                navigate('/');
-            }, 800);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -472,9 +504,9 @@ export default function GamePage() {
             setHistory(prev => [...prev, ...newMessages]);
             inputRef.current?.focus();
 
-        } catch (error: any) {
-            const serverMsg = error.response?.data?.message || 'PASS 처리에 실패했습니다.';
-            const status = error.response?.status;
+        } catch (error: unknown) {
+            const serverMsg = getApiErrorMessage(error, 'PASS 처리에 실패했습니다.');
+            const status = getApiErrorStatus(error);
             if (isExpiredSessionError(serverMsg, status)) {
                 showToast('게임 세션이 만료되어 새 게임으로 시작합니다.', 'error');
                 await startGame();
@@ -486,16 +518,6 @@ export default function GamePage() {
         }
     };
 
-    const handleTimeOver = async () => {
-        if (isGameOver) return;
-        setIsGameOver(true);
-        setGameResult({ type: 'LOSE', msg: '⏰ 시간 초과!' });
-        clearSnapshot();
-        try {
-            if (gameId) await apiClient.post(`/games/${gameId}/timeout`);
-        } catch (e) { console.error("시간 초과 처리 에러", e); }
-    };
-
     const handleQuit = async () => {
         if (gameId && !isGameOver) {
             try { await apiClient.post(`/games/${gameId}/quit`); }
@@ -503,10 +525,6 @@ export default function GamePage() {
         }
         clearSnapshot();
         navigate('/');
-    };
-
-    const addMessage = (msg: Omit<Message, 'id'> & { id?: number }) => {
-        setHistory((prev) => [...prev, { ...msg, id: msg.id || Date.now() }]);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -552,10 +570,10 @@ export default function GamePage() {
                 inputRef.current?.blur();
                 clearSnapshot();
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             setHistory(prev => prev.slice(0, -1));
-            const serverMsg = error.response?.data?.message || '오류가 발생했습니다.';
-            const status = error.response?.status;
+            const serverMsg = getApiErrorMessage(error, '오류가 발생했습니다.');
+            const status = getApiErrorStatus(error);
 
             if (isExpiredSessionError(serverMsg, status)) {
                 showToast('게임 세션이 만료되어 새 게임으로 시작합니다.', 'error');
@@ -563,7 +581,7 @@ export default function GamePage() {
                 return;
             }
 
-            if (status >= 400 && status < 500 && status !== 401 && status !== 403) {
+            if (status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 403) {
                 playErrorSfx();
             }
             setErrorMessage(normalizeSubmitErrorMessage(serverMsg, status));
@@ -617,7 +635,7 @@ export default function GamePage() {
                                 </svg>
                             </button>
                             <div className="flex flex-col items-start ml-1 mr-3">
-                                <span className="text-[10px] text-gray-400 font-black tracking-widest mb-0.5">LEVEL</span>
+                                <span className="text-[10px] text-gray-400 font-black tracking-widest mb-0.5">난이도</span>
                                 <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 leading-none">{level}</span>
                             </div>
                             
@@ -658,12 +676,12 @@ export default function GamePage() {
 
                             {combo > 1 && (
                                 <div className="flex flex-col items-end animate-[pulse_1s_ease-in-out_infinite]">
-                                    <span className="text-[9px] text-orange-500 font-black tracking-widest mb-0.5">COMBO</span>
+                                    <span className="text-[9px] text-orange-500 font-black tracking-widest mb-0.5">콤보</span>
                                     <span className="text-xl font-black text-orange-500 italic leading-none">{combo}</span>
                                 </div>
                             )}
                             <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-gray-400 font-black tracking-widest mb-0.5">SCORE</span>
+                                <span className="text-[10px] text-gray-400 font-black tracking-widest mb-0.5">점수</span>
                                 <span className="text-2xl font-black text-indigo-600 leading-none">{score.toLocaleString()}</span>
                             </div>
                         </div>
@@ -890,7 +908,7 @@ export default function GamePage() {
                             <p className="text-gray-500 font-bold mb-6 text-sm relative z-10">{gameResult.msg}</p>
                             
                             <div className="bg-[#F7F7F9] p-5 rounded-2xl mb-8 border border-gray-100 relative z-10">
-                                <div className="text-[10px] text-gray-400 font-black tracking-widest mb-1">FINAL SCORE</div>
+                                <div className="text-[10px] text-gray-400 font-black tracking-widest mb-1">최종 점수</div>
                                 <div className="text-4xl font-black text-indigo-600 tracking-tighter">{score.toLocaleString()}</div>
                             </div>
                             
