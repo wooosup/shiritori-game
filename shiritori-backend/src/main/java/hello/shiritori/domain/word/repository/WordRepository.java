@@ -28,7 +28,12 @@ public interface WordRepository extends JpaRepository<Word, Long> {
 
     @Query(value = """
             SELECT w.* FROM game_words w
-            WHERE (w.starts_with = :hira OR w.starts_with = :kata)
+            WHERE (
+                w.starts_with = :hira
+                OR w.starts_with = :kata
+                OR w.starts_with = :normalizedHira
+                OR w.starts_with = :normalizedKata
+            )
               AND (:level IS NULL OR w.level = :level OR w.level IS NULL)
               AND w.word NOT IN (
                   SELECT gt.word_text
@@ -43,6 +48,8 @@ public interface WordRepository extends JpaRepository<Word, Long> {
     Optional<Word> findAiWord(@Param("gameId") Long gameId,
                               @Param("hira") String hira,
                               @Param("kata") String kata,
+                              @Param("normalizedHira") String normalizedHira,
+                              @Param("normalizedKata") String normalizedKata,
                               @Param("level") String level);
 
     boolean existsByWord(String word);

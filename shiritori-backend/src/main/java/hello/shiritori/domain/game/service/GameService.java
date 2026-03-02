@@ -180,11 +180,14 @@ public class GameService {
 
     private Optional<Word> findNextAiWord(Game game, Word word) {
         String startChar = word.getEffectiveEndChar();
+        String normalizedStartChar = JapaneseUtils.normalizeForShiritori(startChar);
 
         return wordRepository.findAiWord(
                 game.getId(),
                 JapaneseUtils.toHiragana(startChar),
                 JapaneseUtils.toKatakana(startChar),
+                JapaneseUtils.toHiragana(normalizedStartChar),
+                JapaneseUtils.toKatakana(normalizedStartChar),
                 toLevelFilter(game.getLevel())
         );
     }

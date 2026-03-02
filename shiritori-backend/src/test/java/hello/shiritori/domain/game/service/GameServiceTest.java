@@ -83,6 +83,36 @@ class GameServiceTest {
     }
 
     @Test
+    @DisplayName("유저 단어의 끝 글자가 탁음이어도 정규화 규칙에 맞는 AI 단어를 찾아 이어가야 한다.")
+    void playTurnFindsAiWordWithNormalizedLastChar() {
+        // given
+        wordRepository.deleteAll();
+        UUID userId = UUID.randomUUID();
+        Profile profile = profileRepository.save(Profile.of(userId));
+        Game game = gameRepository.save(Game.create(profile, JlptLevel.N5));
+
+        // AI 시작 단어 (あさ) -> 유저 단어 (さじ) 허용
+        wordRepository.save(Word.of(JlptLevel.N5, "朝", "あさ", "아침"));
+        wordRepository.save(Word.of(JlptLevel.N5, "さじ", "さじ", "수저"));
+        // 유저 단어 끝은 じ, 정규화 시 し로 이어져야 함
+        wordRepository.save(Word.of(JlptLevel.N5, "鹿", "しか", "사슴"));
+
+        gameTurnRepository.save(GameTurn.builder()
+                .game(game)
+                .wordText("朝")
+                .speaker("AI")
+                .turnNumber(1)
+                .build());
+
+        // when
+        TurnResponse response = gameService.playTurn(userId, game.getId(), TurnRequest.of("さじ"));
+
+        // then
+        assertThat(response.getStatus()).isEqualTo("PLAYING");
+        assertThat(response.getAiWord()).isEqualTo("鹿");
+    }
+
+    @Test
     @DisplayName("ALL 레벨에서는 레벨 조건 없이 시작 단어를 찾는다.")
     void findRandomStartWordWithAllLevel() {
         // given
