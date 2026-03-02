@@ -40,7 +40,7 @@ public class ProfileService {
     }
 
     public void updateProfile(UUID userId, String nickname) {
-        Profile profile = findProfileOrThrow(userId);
+        Profile profile = findOrCreateProfile(userId);
         String normalizedNickname = normalizeNickname(nickname);
         validateNicknameNotDuplicate(profile, normalizedNickname);
         profile.updateNickname(normalizedNickname, nicknameValidator);

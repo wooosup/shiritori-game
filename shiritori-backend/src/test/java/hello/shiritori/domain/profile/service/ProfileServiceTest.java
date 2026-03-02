@@ -71,6 +71,17 @@ class ProfileServiceTest {
     }
 
     @Test
+    @DisplayName("신규 유저가 닉네임을 처음 설정하면 프로필을 생성한다.")
+    void updateProfileCreatesProfileForNewUser() {
+        UUID userId = UUID.randomUUID();
+
+        profileService.updateProfile(userId, "newbie");
+
+        Profile profile = profileRepository.findById(userId).orElseThrow();
+        assertThat(profile.getNickname()).isEqualTo("newbie");
+    }
+
+    @Test
     @DisplayName("공백 차이만 있는 닉네임은 중복으로 처리한다.")
     void updateProfileDuplicateNicknameWithWhitespace() {
         UUID userA = UUID.randomUUID();
