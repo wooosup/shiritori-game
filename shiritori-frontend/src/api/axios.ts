@@ -8,10 +8,31 @@ export const supabase = createClient(appEnv.supabaseUrl, appEnv.supabaseAnonKey)
 const API_TIMEOUT_MS = 30000;
 const GET_RETRY_LIMIT = 2;
 const RETRY_BASE_DELAY_MS = 700;
+const GAME_STORAGE_KEYS = ['shiritori:active-game:v1', 'shiritori:tutorial-seen:v1'] as const;
+const AUTH_STORAGE_KEYS = ['supabase.auth.token'] as const;
 
 let isHandlingAuthFailure = false;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function resolveSupabaseProjectRef(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname;
+    const [projectRef] = hostname.split('.');
+    return projectRef || null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAuthAndGameStorage(storage: Pick<Storage, 'removeItem'>): void {
+  const projectRef = resolveSupabaseProjectRef(appEnv.supabaseUrl);
+  const authKeys = projectRef ? [...AUTH_STORAGE_KEYS, `sb-${projectRef}-auth-token`] : AUTH_STORAGE_KEYS;
+
+  for (const key of [...authKeys, ...GAME_STORAGE_KEYS]) {
+    storage.removeItem(key);
+  }
+}
 
 export const apiClient = axios.create({
   baseURL: appEnv.apiBaseUrl,
@@ -70,7 +91,7 @@ apiClient.interceptors.response.use(
         // noop
       }
 
-      localStorage.clear();
+      clearAuthAndGameStorage(localStorage);
 
       const homeHref = `${globalThis.location.origin}/#/`;
       if (globalThis.location.href !== homeHref) {
