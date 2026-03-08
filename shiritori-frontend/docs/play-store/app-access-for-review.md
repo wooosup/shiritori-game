@@ -19,7 +19,7 @@ Test account:
 - Password: <review-test-password>
 
 If Google sign-in is temporarily unavailable, contact:
-<support-email>
+useop0821@gmail.com
 ```
 
 ## 2) 운영 규칙
@@ -34,6 +34,10 @@ If Google sign-in is temporarily unavailable, contact:
 2. 로그인 실패 시 사용자에게 재시도 안내 문구 노출
 3. 백엔드 장애 시 빈 화면이 아닌 오류 메시지 노출
 4. 테스트 계정으로 실제 게임 플레이 가능(시작/입력/PASS/종료)
+5. 앱 내 문의하기/공지/서비스 상태 진입점에서 아래 정보 확인
+   - 문의 메일: `useop0821@gmail.com`
+   - 공지 URL: `/notices/latest.json`
+   - 서비스 상태 URL: `/api/healthz`
 
 ## 4) 관련 제출 항목 링크
 

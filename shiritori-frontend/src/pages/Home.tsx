@@ -15,6 +15,7 @@ import QuizModal from '../components/QuizModal';
 import BottomTabBar, { type BottomTabKey } from '../components/BottomTabBar';
 import { signInWithGoogle, signOutNativeGoogle } from '../platform/auth';
 import { type ThemePreference, useSettingsStore } from '../stores/settingsStore';
+import { NOTICE_FEED_URL, SERVICE_STATUS_URL, SUPPORT_MAILTO } from '../constants/support';
 import StartPage from './StartPage';
 
 interface ApiResponse<T> {
@@ -35,6 +36,13 @@ interface BannerWord {
   word: string;
   reading: string;
   meaning: string;
+}
+
+interface Notice {
+  title: string;
+  summary: string;
+  updatedAt: string;
+  url?: string;
 }
 
 const LEVEL_OPTIONS = [
@@ -130,6 +138,7 @@ export default function Home() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const { sfxEnabled, toggleSfx, themePreference, resolvedTheme, setThemePreference } = useSettingsStore();
 
   const isMounted = useRef(true);
@@ -214,6 +223,29 @@ export default function Home() {
     }
   }, []);
 
+  const fetchNotice = useCallback(async () => {
+    try {
+      const response = await fetch(NOTICE_FEED_URL, { cache: 'no-store' });
+      if (!response.ok) {
+        return;
+      }
+      const data = (await response.json()) as Partial<Notice>;
+      if (!data.title || !data.summary || !data.updatedAt) {
+        return;
+      }
+      if (isMounted.current) {
+        setNotice({
+          title: data.title,
+          summary: data.summary,
+          updatedAt: data.updatedAt,
+          url: typeof data.url === 'string' ? data.url : undefined,
+        });
+      }
+    } catch {
+      // ignore notice failures
+    }
+  }, []);
+
   useEffect(() => {
     isMounted.current = true;
 
@@ -272,7 +304,7 @@ export default function Home() {
     const init = async () => {
       try {
         const sessionPromise = supabase.auth.getSession();
-        await Promise.all([fetchWordCount(), fetchBannerWords(), fetchRankings()]);
+        await Promise.all([fetchWordCount(), fetchBannerWords(), fetchRankings(), fetchNotice()]);
         const [sessionRes] = await Promise.allSettled([sessionPromise]);
 
         if (sessionRes.status === 'fulfilled' && sessionRes.value.data.session) {
@@ -320,7 +352,7 @@ export default function Home() {
       isMounted.current = false;
       authListener.subscription.unsubscribe();
     };
-  }, [fetchBannerWords, fetchRankings, fetchWordCount]);
+  }, [fetchBannerWords, fetchNotice, fetchRankings, fetchWordCount]);
 
   useEffect(() => {
     const state = location.state as { openModal?: 'quiz' | 'options' } | null;
@@ -525,6 +557,40 @@ export default function Home() {
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-gray-500 dark:text-slate-400">지원</p>
+                <div className="space-y-2">
+                  <a
+                    href={SUPPORT_MAILTO}
+                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99] dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <span>문의하기</span>
+                    <span className="text-xs font-semibold text-indigo-500">메일</span>
+                  </a>
+
+                  <a
+                    href={notice?.url ?? NOTICE_FEED_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99] dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <span>{notice ? `공지 · ${notice.title}` : '공지'}</span>
+                    <span className="text-xs font-semibold text-indigo-500">열기</span>
+                  </a>
+
+                  <a
+                    href={SERVICE_STATUS_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99] dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <span>서비스 상태</span>
+                    <span className="text-xs font-semibold text-indigo-500">확인</span>
+                  </a>
+                </div>
+                {notice ? <p className="mt-2 text-[11px] text-gray-500 dark:text-slate-400">{notice.updatedAt} · {notice.summary}</p> : null}
+              </div>
+
               <button
                 onClick={() => {
                   setShowOptionsModal(false);
@@ -651,6 +717,7 @@ export default function Home() {
                 >
                   다시 시도
                 </button>
+                <a href={SUPPORT_MAILTO} className="text-xs font-bold text-red-600 underline underline-offset-2">문의하기</a>
               </div>
             ) : null}
             {bannerError ? (
@@ -663,6 +730,7 @@ export default function Home() {
                 >
                   다시 시도
                 </button>
+                <a href={SUPPORT_MAILTO} className="text-xs font-bold text-amber-700 underline underline-offset-2">문의하기</a>
               </div>
             ) : null}
           </div>
@@ -760,6 +828,7 @@ export default function Home() {
               >
                 다시 시도
               </button>
+              <a href={SUPPORT_MAILTO} className="text-xs font-bold text-red-600 underline underline-offset-2">문의하기</a>
             </div>
           ) : null}
         </div>
