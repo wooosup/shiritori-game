@@ -127,12 +127,38 @@
 }
 
 .start-error {
-  margin-top: 12px;
+  margin-top: 10px;
   margin-bottom: 0;
   font-family: var(--font-app-sans);
   font-size: 12px;
   color: #b91c1c;
   text-align: center;
+}
+
+.start-error-box {
+  margin-top: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(254, 242, 242, 0.85);
+  border-radius: 14px;
+  padding: 8px 12px 10px;
+  width: 100%;
+}
+
+.start-error-help {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #7f1d1d;
+  text-align: center;
+}
+
+.start-error-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #991b1b;
+  text-decoration: underline;
 }
 
 @keyframes start-float {
@@ -197,4 +223,14 @@ html.dark .start-google-btn {
 
 html.dark .start-error {
   color: #fca5a5;
+}
+
+html.dark .start-error-box {
+  border-color: rgba(252, 165, 165, 0.35);
+  background: rgba(127, 29, 29, 0.3);
+}
+
+html.dark .start-error-help,
+html.dark .start-error-link {
+  color: #fecaca;
 }

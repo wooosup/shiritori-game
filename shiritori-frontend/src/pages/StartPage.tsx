@@ -1,4 +1,5 @@
 import './StartPage.css';
+import { SUPPORT_MAILTO } from '../constants/support';
 
 interface StartPageProps {
   onGoogleLogin: () => void;
@@ -35,7 +36,13 @@ export default function StartPage({ onGoogleLogin, loading = false, errorMessage
           <span>{loading ? '연결 중...' : 'Google로 시작하기'}</span>
         </button>
 
-        {errorMessage ? <p className="start-error">{errorMessage}</p> : null}
+        {errorMessage ? (
+          <div className="start-error-box" role="alert">
+            <p className="start-error">{errorMessage}</p>
+            <p className="start-error-help">네트워크 상태를 확인한 뒤 다시 시도해 주세요.</p>
+            <a href={SUPPORT_MAILTO} className="start-error-link">문의하기</a>
+          </div>
+        ) : null}
       </main>
     </div>
   );
