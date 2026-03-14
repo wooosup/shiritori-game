@@ -22,7 +22,7 @@ function PrivacyContent() {
       </section>
       <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">문의</h2>
-        <p>[운영자 이메일 입력 필요]</p>
+        <p>useop0821@gmail.com</p>
       </section>
     </div>
   );
@@ -45,7 +45,7 @@ function AccountDeletionContent() {
       </section>
       <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">문의</h2>
-        <p>[운영자 이메일 입력 필요]</p>
+        <p>useop0821@gmail.com</p>
       </section>
     </div>
   );
