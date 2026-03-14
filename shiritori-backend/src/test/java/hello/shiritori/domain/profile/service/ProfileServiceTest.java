@@ -184,7 +184,8 @@ class ProfileServiceTest {
 
         assertThat(profileRepository.findById(userId)).isEmpty();
         assertThat(gameRepository.findById(game.getId())).isEmpty();
-        assertThat(gameTurnRepository.findAll()).isEmpty();
+        assertThat(gameTurnRepository.findAll())
+                .noneMatch(turn -> turn.getGame().getId().equals(game.getId()));
         assertThat(userSessionRepository.findByUserIdOrderByLastSeenAtDesc(userId)).isEmpty();
         assertThat(gameActionIdempotencyRepository.findAll())
                 .noneMatch(record -> userId.equals(record.getUserId()));
@@ -192,8 +193,9 @@ class ProfileServiceTest {
     }
 
     @Test
-    @DisplayName("외부 인증 계정 삭제가 실패해도 로컬 계정 삭제는 완료된다.")
-    void deleteMyAccountStillSucceedsWhenAuthProviderFails() {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("외부 인증 계정 삭제가 실패하면 계정 삭제를 롤백한다.")
+    void deleteMyAccountRollsBackWhenAuthProviderFails() {
         UUID userId = UUID.randomUUID();
         Profile profile = profileRepository.save(Profile.of(userId));
         Game game = gameRepository.save(Game.create(profile, JlptLevel.N5));
@@ -201,17 +203,21 @@ class ProfileServiceTest {
 
         doThrow(AuthProviderException.deleteFailed()).when(authIdentityRemover).deleteIdentity(userId);
 
-        profileService.deleteMyAccount(userId);
+        assertThatThrownBy(() -> profileService.deleteMyAccount(userId))
+                .isInstanceOf(AuthProviderException.class)
+                .hasMessage("인증 계정 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
-        assertThat(profileRepository.findById(userId)).isEmpty();
-        assertThat(gameRepository.findById(game.getId())).isEmpty();
-        assertThat(gameTurnRepository.findAll()).isEmpty();
+        assertThat(profileRepository.findById(userId)).isPresent();
+        assertThat(gameRepository.findById(game.getId())).isPresent();
+        assertThat(gameTurnRepository.findAll())
+                .anyMatch(turn -> turn.getGame().getId().equals(game.getId()));
         verify(authIdentityRemover).deleteIdentity(userId);
     }
 
     @Test
-    @DisplayName("외부 인증 삭제에서 런타임 예외가 나도 로컬 계정 삭제는 완료된다.")
-    void deleteMyAccountStillSucceedsWhenAuthProviderThrowsRuntimeException() {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("외부 인증 삭제에서 예기치 못한 예외가 나면 계정 삭제를 롤백한다.")
+    void deleteMyAccountRollsBackWhenAuthProviderThrowsRuntimeException() {
         UUID userId = UUID.randomUUID();
         Profile profile = profileRepository.save(Profile.of(userId));
         Game game = gameRepository.save(Game.create(profile, JlptLevel.N5));
@@ -219,11 +225,14 @@ class ProfileServiceTest {
 
         doThrow(new IllegalStateException("unexpected failure")).when(authIdentityRemover).deleteIdentity(userId);
 
-        profileService.deleteMyAccount(userId);
+        assertThatThrownBy(() -> profileService.deleteMyAccount(userId))
+                .isInstanceOf(AuthProviderException.class)
+                .hasMessage("인증 계정 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
-        assertThat(profileRepository.findById(userId)).isEmpty();
-        assertThat(gameRepository.findById(game.getId())).isEmpty();
-        assertThat(gameTurnRepository.findAll()).isEmpty();
+        assertThat(profileRepository.findById(userId)).isPresent();
+        assertThat(gameRepository.findById(game.getId())).isPresent();
+        assertThat(gameTurnRepository.findAll())
+                .anyMatch(turn -> turn.getGame().getId().equals(game.getId()));
         verify(authIdentityRemover).deleteIdentity(userId);
     }
 }

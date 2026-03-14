@@ -9,6 +9,7 @@ import hello.shiritori.domain.profile.policy.NicknameValidator;
 import hello.shiritori.domain.gameTurn.repository.GameTurnRepository;
 import hello.shiritori.domain.session.repository.UserSessionRepository;
 import hello.shiritori.domain.wordBook.repository.WordBookRepository;
+import hello.shiritori.global.exception.AuthProviderException;
 import hello.shiritori.global.exception.UserException;
 import hello.shiritori.global.exception.UserNotFound;
 import hello.shiritori.domain.profile.repository.ProfileRepository;
@@ -55,8 +56,12 @@ public class ProfileService {
         profileRepository.deleteByUserId(userId);
         try {
             authIdentityRemover.deleteIdentity(userId);
+        } catch (AuthProviderException e) {
+            log.warn("외부 인증 계정 삭제 실패(userId={})", userId, e);
+            throw e;
         } catch (RuntimeException e) {
-            log.warn("외부 인증 계정 삭제 실패(userId={}) - 로컬 계정 삭제는 완료", userId, e);
+            log.error("예상하지 못한 외부 인증 계정 삭제 오류(userId={})", userId, e);
+            throw AuthProviderException.deleteFailed();
         }
     }
 
