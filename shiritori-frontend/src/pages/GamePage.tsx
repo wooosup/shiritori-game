@@ -52,7 +52,6 @@ interface GameSnapshot {
 const TURN_TIME_LIMIT = 20;
 const SNAPSHOT_STORAGE_KEY = 'shiritori:active-game:v1';
 const SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 30;
-const TUTORIAL_STORAGE_KEY = 'shiritori:tutorial-seen:v1';
 
 function normalizeSubmitErrorMessage(message: string, status?: number): string {
     if (status === 429) {
@@ -135,7 +134,6 @@ export default function GamePage() {
     const [isPaused, setIsPaused] = useState(false);
     const [pauseReason, setPauseReason] = useState<PauseReason | null>(null);
     const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
-    const [showTutorial, setShowTutorial] = useState(false);
 
     const [toast, setToast] = useState<{show: boolean, msg: string, type: 'success' | 'error'}>({
         show: false, msg: '', type: 'success'
@@ -186,14 +184,6 @@ export default function GamePage() {
             return;
         }
         pauseGame('manual');
-    };
-
-    const handleDismissTutorial = () => {
-        setShowTutorial(false);
-        if (typeof window !== 'undefined') {
-            window.localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
-        }
-        inputRef.current?.focus();
     };
 
     const restoreSnapshot = useCallback((): boolean => {
@@ -293,12 +283,6 @@ export default function GamePage() {
         const restored = restoreSnapshot();
         if (!restored) {
             startGame();
-        }
-        if (typeof window !== 'undefined') {
-            const seenTutorial = window.localStorage.getItem(TUTORIAL_STORAGE_KEY) === 'true';
-            if (!seenTutorial) {
-                setShowTutorial(true);
-            }
         }
     }, [restoreSnapshot, startGame]);
 
@@ -826,27 +810,7 @@ export default function GamePage() {
                     </form>
                 </footer>
 
-                {/* 4. 튜토리얼 모달 (최초 1회) */}
-                {showTutorial && (
-                    <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-5 animate-fadeIn">
-                        <div className="w-full max-w-[340px] rounded-3xl bg-white p-6 shadow-2xl">
-                            <h3 className="text-xl font-black text-gray-800 mb-3">처음 플레이 가이드</h3>
-                            <ul className="space-y-2 text-sm font-bold text-gray-600">
-                                <li>1. 상대가 낸 단어의 끝 글자로 시작하는 단어를 입력하세요.</li>
-                                <li>2. 앱이 백그라운드로 가면 자동으로 일시정지돼요.</li>
-                                <li>3. 재개할 때 3초 카운트다운 후 바로 이어집니다.</li>
-                            </ul>
-                            <button
-                                onClick={handleDismissTutorial}
-                                className="mt-6 w-full rounded-2xl bg-indigo-600 py-3 text-sm font-black text-white hover:bg-indigo-700 active:scale-95"
-                            >
-                                확인하고 시작
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* 5. 일시정지 오버레이 */}
+                {/* 4. 일시정지 오버레이 */}
                 {isPaused && resumeCountdown === null && !isGameOver && (
                     <div className="absolute inset-0 z-[65] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-fadeIn">
                         <div className="w-full max-w-[300px] rounded-3xl bg-white p-6 text-center shadow-2xl">
@@ -867,7 +831,7 @@ export default function GamePage() {
                     </div>
                 )}
 
-                {/* 6. 재개 카운트다운 */}
+                {/* 5. 재개 카운트다운 */}
                 {resumeCountdown !== null && !isGameOver && (
                     <div className="absolute inset-0 z-[68] flex items-center justify-center bg-black/45 backdrop-blur-md animate-fadeIn">
                         <div className="flex h-36 w-36 items-center justify-center rounded-full bg-white/95 shadow-2xl">
@@ -878,7 +842,7 @@ export default function GamePage() {
                     </div>
                 )}
 
-                {/* 7. PASS 모달 */}
+                {/* 6. PASS 모달 */}
                 {showPassModal && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
                         <div className="bg-white w-full max-w-[320px] p-6 rounded-3xl shadow-2xl flex flex-col items-center text-center animate-bounceIn">
@@ -922,7 +886,7 @@ export default function GamePage() {
                     </div>
                 )}
 
-                {/* 8. 결과 모달 */}
+                {/* 7. 결과 모달 */}
                 {isGameOver && gameResult && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fadeIn">
                         <div className="bg-white p-8 rounded-3xl shadow-2xl text-center animate-bounceIn w-full max-w-[320px] relative overflow-hidden">

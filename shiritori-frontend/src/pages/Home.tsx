@@ -9,6 +9,7 @@ import {
 import { supabase, apiClient } from '../api/axios';
 import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import NicknameModal from '../components/NicknameModal';
+import OnboardingModal from '../components/OnboardingModal';
 import RuleModal from '../components/RuleModal';
 import SearchModal from '../components/SearchModal';
 import QuizModal from '../components/QuizModal';
@@ -18,6 +19,7 @@ import { signInWithGoogle, signOutNativeGoogle } from '../platform/auth';
 import { getRuntimePlatform } from '../platform/runtime';
 import { type ThemePreference, useSettingsStore } from '../stores/settingsStore';
 import { SUPPORT_MAILTO } from '../constants/support';
+import { hasSeenOnboarding } from '../lib/onboarding';
 import { captureError, setTelemetryUser, trackEvent } from '../lib/telemetry';
 import StartPage from './StartPage';
 
@@ -121,6 +123,7 @@ export default function Home() {
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [totalWords, setTotalWords] = useState<number>(0);
   const [bannerWords, setBannerWords] = useState<BannerWord[]>([]);
@@ -355,6 +358,16 @@ export default function Home() {
   }, [user]);
 
   useEffect(() => {
+    if (loading || !authResolved) {
+      return;
+    }
+
+    if (!hasSeenOnboarding()) {
+      setShowOnboarding(true);
+    }
+  }, [authResolved, loading]);
+
+  useEffect(() => {
     const state = location.state as { openModal?: 'quiz' | 'options' } | null;
     if (!state?.openModal) {
       return;
@@ -437,16 +450,51 @@ export default function Home() {
     navigate('/game', { state: { level } });
   };
 
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+  };
+
+  const handleOnboardingCta = () => {
+    handleStart();
+    setShowOnboarding(false);
+  };
+
+  const onboardingCtaLabel = !user
+    ? 'Google로 시작하기'
+    : nickname
+      ? '첫 판 시작하기'
+      : '닉네임 만들고 시작';
+
   if (loading || !authResolved) {
     return <div className="flex h-[100dvh] items-center justify-center bg-[#F7F7F9] text-gray-700 dark:bg-slate-950 dark:text-slate-100">로딩 중...</div>;
   }
 
   if (!user) {
-    return <StartPage onGoogleLogin={handleLogin} loading={isLoggingIn} errorMessage={loginError} />;
+    return (
+      <>
+        <StartPage onGoogleLogin={handleLogin} loading={isLoggingIn} errorMessage={loginError} />
+        {showOnboarding ? (
+          <OnboardingModal
+            isOpen
+            ctaLabel={onboardingCtaLabel}
+            onCta={handleOnboardingCta}
+            onClose={handleOnboardingClose}
+          />
+        ) : null}
+      </>
+    );
   }
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_#eef2ff_0%,_#f7f7f9_38%,_#f7f7f9_100%)] dark:bg-[radial-gradient(circle_at_top_right,_#1f2937_0%,_#0f172a_42%,_#020617_100%)]">
+      {showOnboarding ? (
+        <OnboardingModal
+          isOpen
+          ctaLabel={onboardingCtaLabel}
+          onCta={handleOnboardingCta}
+          onClose={handleOnboardingClose}
+        />
+      ) : null}
       <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
       <QuizModal isOpen={showQuizModal} onClose={() => closeQuizModal('dismiss')} />
 
