@@ -53,6 +53,12 @@ interface GameResultState {
     words: GameResultWord[];
 }
 
+interface WordBookSnapshotItem {
+    word: string;
+    reading?: string;
+    meaning?: string;
+}
+
 interface GameSnapshot {
     version: number;
     savedAt: number;
@@ -70,6 +76,10 @@ interface GameSnapshot {
 const TURN_TIME_LIMIT = 20;
 const SNAPSHOT_STORAGE_KEY = 'shiritori:active-game:v1';
 const SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 30;
+
+function normalizeWordKey(word: string): string {
+    return word.trim().toLowerCase();
+}
 
 function normalizeSubmitErrorMessage(message: string, status?: number): string {
     if (status === 429) {
@@ -180,6 +190,8 @@ export default function GamePage() {
     const [pauseReason, setPauseReason] = useState<PauseReason | null>(null);
     const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
     const [savingResultWord, setSavingResultWord] = useState<string | null>(null);
+    const [savedWordSnapshots, setSavedWordSnapshots] = useState<WordBookSnapshotItem[]>([]);
+    const [isPreparingReviewQuiz, setIsPreparingReviewQuiz] = useState(false);
     const [bestRecordBaseline, setBestRecordBaseline] = useState(() => ({
         score: typeof locationState?.previousBestScore === 'number' ? locationState.previousBestScore : 0,
         maxCombo: typeof locationState?.previousBestCombo === 'number' ? locationState.previousBestCombo : 0,
@@ -198,6 +210,14 @@ export default function GamePage() {
     const previousComboRef = useRef(0);
     const { validateWord } = useShiritoriValidation(history);
     const [comboBurstActive, setComboBurstActive] = useState(false);
+
+    const savedWordLookup = useCallback(() => {
+        const lookup = new Map<string, WordBookSnapshotItem>();
+        savedWordSnapshots.forEach((entry) => {
+            lookup.set(normalizeWordKey(entry.word), entry);
+        });
+        return lookup;
+    }, [savedWordSnapshots]);
 
     const clearSnapshot = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -276,6 +296,59 @@ export default function GamePage() {
         setHistory((prev) => [...prev, { ...msg, id: msg.id || Date.now() }]);
     }, []);
 
+    const resultWords = React.useMemo(() => {
+        if (!gameResult) {
+            return [] as GameResultWord[];
+        }
+
+        const lookup = savedWordLookup();
+        return gameResult.words.map((wordEntry) => {
+            const savedEntry = lookup.get(normalizeWordKey(wordEntry.word));
+            return {
+                ...wordEntry,
+                reading: savedEntry?.reading ?? wordEntry.reading,
+                meaning: savedEntry?.meaning ?? wordEntry.meaning,
+                saved: Boolean(savedEntry),
+            };
+        });
+    }, [gameResult, savedWordLookup]);
+
+    const reviewWords = React.useMemo(() => {
+        const unsavedWords = resultWords.filter((word) => !word.saved);
+        if (unsavedWords.length > 0) {
+            return unsavedWords.slice(-3).reverse().map((word) => ({
+                ...word,
+                highlight: '저장 추천',
+            }));
+        }
+
+        return resultWords.slice(-2).reverse().map((word) => ({
+            ...word,
+            highlight: '다시 보기',
+        }));
+    }, [resultWords]);
+
+    const reviewWordLookup = React.useMemo(() => {
+        const lookup = new Map<string, string>();
+        reviewWords.forEach((word) => {
+            lookup.set(normalizeWordKey(word.word), word.highlight ?? '복습');
+        });
+        return lookup;
+    }, [reviewWords]);
+
+    const decoratedResultWords = React.useMemo(() => {
+        return resultWords.map((word) => ({
+            ...word,
+            highlight: reviewWordLookup.get(normalizeWordKey(word.word)),
+        }));
+    }, [resultWords, reviewWordLookup]);
+
+    const hasUnsavedReviewWords = reviewWords.some((word) => !word.saved);
+    const reviewTitle = hasUnsavedReviewWords ? '복습 추천' : '이번 판 핵심 단어';
+    const reviewSubtitle = hasUnsavedReviewWords
+        ? '아직 저장하지 않은 단어부터 단어장에 담고 바로 퀴즈로 복습해보세요.'
+        : '이번 판에서 쓴 핵심 단어를 다시 확인하고 바로 퀴즈로 넘어가세요.';
+
     const finalizeGame = useCallback((
         resultType: GameResultType,
         message: string,
@@ -319,6 +392,8 @@ export default function GamePage() {
             setPauseReason(null);
             setResumeCountdown(null);
             setSavingResultWord(null);
+            setIsPreparingReviewQuiz(false);
+            setSavedWordSnapshots([]);
             previousComboRef.current = 0;
             setComboBurstActive(false);
             clearSnapshot();
@@ -352,6 +427,17 @@ export default function GamePage() {
             setLoading(false);
         }
     }, [addMessage, clearSnapshot, level, navigate, showToast]);
+
+    const fetchSavedWordSnapshots = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/wordBooks');
+            if (response.data.code === 200) {
+                setSavedWordSnapshots(response.data.data);
+            }
+        } catch (error: unknown) {
+            captureError(error, { action: 'game_result_wordbook_snapshot', level });
+        }
+    }, [level]);
 
     const handleTimeOver = useCallback(async () => {
         if (isGameOver) return;
@@ -483,6 +569,14 @@ export default function GamePage() {
         playGameResultSfx(gameResult.type);
     }, [gameResult]);
 
+    useEffect(() => {
+        if (!gameResult) {
+            return;
+        }
+
+        void fetchSavedWordSnapshots();
+    }, [fetchSavedWordSnapshots, gameResult]);
+
     // --- 복귀 카운트다운 ---
     useEffect(() => {
         if (resumeCountdown === null) return;
@@ -576,12 +670,27 @@ export default function GamePage() {
             const res = await apiClient.post('/wordBooks', { word });
             if (res.data.code === 200) {
                 trackEvent('wordbook_saved', { source, level });
+                setSavedWordSnapshots((prev) => {
+                    if (prev.some((entry) => normalizeWordKey(entry.word) === normalizeWordKey(word))) {
+                        return prev;
+                    }
+
+                    const resultWord = gameResult?.words.find((entry) => normalizeWordKey(entry.word) === normalizeWordKey(word));
+                    return [...prev, {
+                        word,
+                        reading: resultWord?.reading,
+                        meaning: resultWord?.meaning,
+                    }];
+                });
                 showToast("단어장에 저장했습니다.", 'success');
             }
         } catch (error: unknown) {
             captureError(error, { action: 'wordbook_save', source, level });
             const msg = getApiErrorMessage(error, "저장에 실패했습니다.");
             if (msg.includes("이미")) {
+                setSavedWordSnapshots((prev) => prev.some((entry) => normalizeWordKey(entry.word) === normalizeWordKey(word))
+                    ? prev
+                    : [...prev, { word }]);
                 showToast("이미 단어장에 있는 단어입니다.", 'error');
             } else {
                 showToast(msg, 'error');
@@ -740,6 +849,72 @@ export default function GamePage() {
     const handleGoHome = () => {
         clearSnapshot();
         navigate('/');
+    };
+
+    const handleOpenReviewQuiz = async () => {
+        if (isPreparingReviewQuiz) {
+            return;
+        }
+
+        setIsPreparingReviewQuiz(true);
+        const unsavedReviewWords = reviewWords.filter((word) => !word.saved);
+
+        try {
+            if (unsavedReviewWords.length > 0) {
+                const saveResults = await Promise.allSettled(
+                    unsavedReviewWords.map((word) => apiClient.post('/wordBooks', { word: word.word })),
+                );
+
+                const nextSavedWords: WordBookSnapshotItem[] = [];
+                saveResults.forEach((result, index) => {
+                    const wordEntry = unsavedReviewWords[index];
+                    if (result.status === 'fulfilled' && result.value.data.code === 200) {
+                        nextSavedWords.push({
+                            word: wordEntry.word,
+                            reading: wordEntry.reading,
+                            meaning: wordEntry.meaning,
+                        });
+                    }
+
+                    if (result.status === 'rejected') {
+                        const message = getApiErrorMessage(result.reason, '');
+                        if (message.includes('이미')) {
+                            nextSavedWords.push({
+                                word: wordEntry.word,
+                                reading: wordEntry.reading,
+                                meaning: wordEntry.meaning,
+                            });
+                        }
+                    }
+                });
+
+                if (nextSavedWords.length > 0) {
+                    setSavedWordSnapshots((prev) => {
+                        const merged = [...prev];
+                        nextSavedWords.forEach((entry) => {
+                            if (!merged.some((saved) => normalizeWordKey(saved.word) === normalizeWordKey(entry.word))) {
+                                merged.push(entry);
+                            }
+                        });
+                        return merged;
+                    });
+                }
+            }
+
+            trackEvent('quiz_opened', { source: 'game_result_review', level });
+            clearSnapshot();
+            navigate('/', { state: { openModal: 'quiz' } });
+        } catch (error: unknown) {
+            captureError(error, { action: 'game_result_review_quiz', level });
+            showToast('복습 퀴즈를 열지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+        } finally {
+            setIsPreparingReviewQuiz(false);
+        }
+    };
+
+    const handleViewWordBook = () => {
+        clearSnapshot();
+        navigate('/wordbook');
     };
 
     const handleChatClick = () => {
@@ -1042,9 +1217,15 @@ export default function GamePage() {
                         score={gameResult.score}
                         combo={gameResult.maxCombo}
                         isNewRecord={gameResult.isNewRecord}
-                        words={gameResult.words}
+                        words={decoratedResultWords}
                         isSavingWord={savingResultWord}
                         onSaveWord={(word) => handleSaveWord(word, 'game_result')}
+                        onOpenReviewQuiz={() => {
+                            void handleOpenReviewQuiz();
+                        }}
+                        onViewWordBook={handleViewWordBook}
+                        reviewTitle={reviewTitle}
+                        reviewSubtitle={reviewSubtitle}
                         onPlayAgain={handlePlayAgain}
                         onGoHome={handleGoHome}
                         onClose={handleGoHome}
