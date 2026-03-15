@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { apiClient } from '../api/axios';
 import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
+import GameResultModal, { type GameResultType, type GameResultWord } from '../components/GameResultModal';
 import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
 import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
 import { playErrorSfx } from '../sound/effects';
@@ -35,6 +36,22 @@ interface Message {
 }
 
 type PauseReason = 'manual' | 'background';
+type ResultHistoryMessage = Message | Omit<Message, 'id'>;
+
+interface GameLocationState {
+    level?: string;
+    previousBestScore?: number;
+    previousBestCombo?: number;
+}
+
+interface GameResultState {
+    type: GameResultType;
+    msg: string;
+    score: number;
+    maxCombo: number;
+    isNewRecord: boolean;
+    words: GameResultWord[];
+}
 
 interface GameSnapshot {
     version: number;
@@ -46,6 +63,7 @@ interface GameSnapshot {
     timeLeft: number;
     score: number;
     combo: number;
+    bestCombo: number;
     inputWord: string;
 }
 
@@ -103,6 +121,9 @@ function parseSnapshot(raw: string | null): GameSnapshot | null {
             timeLeft: typeof parsed.timeLeft === 'number' ? parsed.timeLeft : TURN_TIME_LIMIT,
             score: typeof parsed.score === 'number' ? parsed.score : 0,
             combo: typeof parsed.combo === 'number' ? parsed.combo : 0,
+            bestCombo: typeof parsed.bestCombo === 'number'
+                ? parsed.bestCombo
+                : (typeof parsed.combo === 'number' ? parsed.combo : 0),
             inputWord: typeof parsed.inputWord === 'string' ? parsed.inputWord : '',
         };
     } catch {
@@ -110,10 +131,33 @@ function parseSnapshot(raw: string | null): GameSnapshot | null {
     }
 }
 
+function extractPlayedWords(history: ResultHistoryMessage[]): GameResultWord[] {
+    const seenWords = new Set<string>();
+
+    return history
+        .filter((message) => message.sender === 'USER' && typeof message.word === 'string' && message.word.trim().length > 0)
+        .map((message) => ({
+            word: message.word as string,
+            reading: message.reading,
+        }))
+        .filter((entry) => {
+            if (seenWords.has(entry.word)) {
+                return false;
+            }
+            seenWords.add(entry.word);
+            return true;
+        });
+}
+
+function isBetterRecord(score: number, combo: number, previousBestScore: number, previousBestCombo: number): boolean {
+    return score > previousBestScore || (score === previousBestScore && combo > previousBestCombo);
+}
+
 export default function GamePage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const level = location.state?.level || 'N5';
+    const locationState = (location.state as GameLocationState | null) ?? null;
+    const level = locationState?.level || 'N5';
 
     // 게임 상태
     const [gameId, setGameId] = useState<number | null>(null);
@@ -125,15 +169,21 @@ export default function GamePage() {
     const [showPassModal, setShowPassModal] = useState(false);
     const [timeLeft, setTimeLeft] = useState(TURN_TIME_LIMIT);
     const [isGameOver, setIsGameOver] = useState(false);
-    const [gameResult, setGameResult] = useState<{ type: 'WIN' | 'LOSE', msg: string } | null>(null);
+    const [gameResult, setGameResult] = useState<GameResultState | null>(null);
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
+    const [bestCombo, setBestCombo] = useState(0);
     const [shake, setShake] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [pauseReason, setPauseReason] = useState<PauseReason | null>(null);
     const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+    const [savingResultWord, setSavingResultWord] = useState<string | null>(null);
+    const [bestRecordBaseline, setBestRecordBaseline] = useState(() => ({
+        score: typeof locationState?.previousBestScore === 'number' ? locationState.previousBestScore : 0,
+        maxCombo: typeof locationState?.previousBestCombo === 'number' ? locationState.previousBestCombo : 0,
+    }));
 
     const [toast, setToast] = useState<{show: boolean, msg: string, type: 'success' | 'error'}>({
         show: false, msg: '', type: 'success'
@@ -207,6 +257,7 @@ export default function GamePage() {
         setTimeLeft(snapshot.timeLeft);
         setScore(snapshot.score);
         setCombo(snapshot.combo);
+        setBestCombo(snapshot.bestCombo);
         setInputWord(snapshot.inputWord);
         setIsPaused(true);
         setPauseReason('background');
@@ -220,6 +271,37 @@ export default function GamePage() {
         setHistory((prev) => [...prev, { ...msg, id: msg.id || Date.now() }]);
     }, []);
 
+    const finalizeGame = useCallback((
+        resultType: GameResultType,
+        message: string,
+        finalScore: number,
+        finalBestCombo: number,
+        historySnapshot: ResultHistoryMessage[],
+    ) => {
+        const isNewRecord = isBetterRecord(
+            finalScore,
+            finalBestCombo,
+            bestRecordBaseline.score,
+            bestRecordBaseline.maxCombo,
+        );
+
+        setGameResult({
+            type: resultType,
+            msg: message,
+            score: finalScore,
+            maxCombo: finalBestCombo,
+            isNewRecord,
+            words: extractPlayedWords(historySnapshot),
+        });
+
+        if (isNewRecord || finalBestCombo > bestRecordBaseline.maxCombo) {
+            setBestRecordBaseline((previous) => ({
+                score: Math.max(previous.score, finalScore),
+                maxCombo: Math.max(previous.maxCombo, finalBestCombo),
+            }));
+        }
+    }, [bestRecordBaseline.maxCombo, bestRecordBaseline.score]);
+
     const startGame = useCallback(async () => {
         try {
             setLoading(true);
@@ -231,6 +313,7 @@ export default function GamePage() {
             setIsPaused(false);
             setPauseReason(null);
             setResumeCountdown(null);
+            setSavingResultWord(null);
             clearSnapshot();
 
             const res = await apiClient.post('/games/start', { level });
@@ -239,6 +322,7 @@ export default function GamePage() {
                 trackEvent('game_started', { level, gameId: data.gameId });
                 setGameId(data.gameId);
                 setCombo(0);
+                setBestCombo(0);
                 setScore(0);
                 setPassCount(3);
                 setTimeLeft(TURN_TIME_LIMIT);
@@ -264,9 +348,10 @@ export default function GamePage() {
 
     const handleTimeOver = useCallback(async () => {
         if (isGameOver) return;
+        const finalBestCombo = Math.max(bestCombo, combo);
         setIsGameOver(true);
-        setGameResult({ type: 'LOSE', msg: '⏰ 시간 초과!' });
-        trackEvent('game_ended', { level, result: 'timeout', score, combo });
+        finalizeGame('lose', '⏰ 시간 초과!', score, finalBestCombo, history);
+        trackEvent('game_ended', { level, result: 'timeout', score, combo: finalBestCombo });
         clearSnapshot();
         try {
             if (gameId) await apiClient.post(`/games/${gameId}/timeout`);
@@ -274,7 +359,7 @@ export default function GamePage() {
             console.error("시간 초과 처리 에러", e);
             captureError(e, { action: 'game_timeout', level });
         }
-    }, [clearSnapshot, combo, gameId, isGameOver, level, score]);
+    }, [bestCombo, clearSnapshot, combo, finalizeGame, gameId, history, isGameOver, level, score]);
 
     // --- 초기화 ---
     useEffect(() => {
@@ -437,27 +522,31 @@ export default function GamePage() {
             timeLeft,
             score,
             combo,
+            bestCombo,
             inputWord,
         };
 
         window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
-    }, [clearSnapshot, level, gameId, history, passCount, timeLeft, score, combo, inputWord, isGameOver]);
+    }, [bestCombo, clearSnapshot, level, gameId, history, passCount, timeLeft, score, combo, inputWord, isGameOver]);
 
-    const handleSaveWord = async (word: string) => {
+    const handleSaveWord = async (word: string, source: 'game_chat' | 'game_result' = 'game_result') => {
+        setSavingResultWord(word);
         try {
             const res = await apiClient.post('/wordBooks', { word });
             if (res.data.code === 200) {
-                trackEvent('wordbook_saved', { source: 'game_result', level });
+                trackEvent('wordbook_saved', { source, level });
                 showToast("단어장에 저장했습니다.", 'success');
             }
         } catch (error: unknown) {
-            captureError(error, { action: 'wordbook_save', source: 'game_result', level });
+            captureError(error, { action: 'wordbook_save', source, level });
             const msg = getApiErrorMessage(error, "저장에 실패했습니다.");
             if (msg.includes("이미")) {
                 showToast("이미 단어장에 있는 단어입니다.", 'error');
             } else {
                 showToast(msg, 'error');
             }
+        } finally {
+            setSavingResultWord((current) => (current === word ? null : current));
         }
     };
 
@@ -540,7 +629,8 @@ export default function GamePage() {
             return;
         }
 
-        addMessage({ sender: 'USER', word: userInput, reading: userInput });
+        const userMessage: Omit<Message, 'id'> = { sender: 'USER', word: userInput, reading: userInput };
+        addMessage(userMessage);
         setInputWord('');
         setErrorMessage(null);
         setLoading(true);
@@ -551,6 +641,8 @@ export default function GamePage() {
             const data: TurnResponse = res.data.data;
             setScore(data.currentScore);
             setCombo(data.currentCombo);
+            const nextBestCombo = Math.max(bestCombo, data.currentCombo);
+            setBestCombo(nextBestCombo);
 
             // 💡 [중요] 일반 턴에서도 패스 횟수 동기화
             if (data.remainingPass !== undefined) setPassCount(data.remainingPass);
@@ -565,9 +657,15 @@ export default function GamePage() {
                     level,
                     result: isWin ? 'win' : 'lose',
                     score: data.currentScore,
-                    combo: data.currentCombo,
+                    combo: nextBestCombo,
                 });
-                setGameResult({ type: isWin ? 'WIN' : 'LOSE', msg: data.message });
+                finalizeGame(
+                    isWin ? 'win' : 'lose',
+                    data.message,
+                    data.currentScore,
+                    nextBestCombo,
+                    [...history, userMessage],
+                );
                 inputRef.current?.blur();
                 clearSnapshot();
             }
@@ -592,6 +690,15 @@ export default function GamePage() {
             setErrorMessage(normalizeSubmitErrorMessage(serverMsg, status));
             setInputWord(userInput);
         } finally { setLoading(false); }
+    };
+
+    const handlePlayAgain = () => {
+        void startGame();
+    };
+
+    const handleGoHome = () => {
+        clearSnapshot();
+        navigate('/');
     };
 
     const handleChatClick = () => {
@@ -721,7 +828,7 @@ export default function GamePage() {
 
                                     {/* 말풍선 본체 */}
                                     <div
-                                        onClick={() => isAi && msg.word ? handleSaveWord(msg.word) : null}
+                                        onClick={() => isAi && msg.word ? handleSaveWord(msg.word, 'game_chat') : null}
                                         className={`
                                             relative px-5 py-3 shadow-sm font-jp transition-all duration-300
                                             ${isAi
@@ -886,36 +993,22 @@ export default function GamePage() {
                     </div>
                 )}
 
-                {/* 7. 결과 모달 */}
-                {isGameOver && gameResult && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fadeIn">
-                        <div className="bg-white p-8 rounded-3xl shadow-2xl text-center animate-bounceIn w-full max-w-[320px] relative overflow-hidden">
-                            {/* 데코레이션 배경 */}
-                            <div className={`absolute top-0 left-0 w-full h-32 ${gameResult.type === 'WIN' ? 'bg-gradient-to-b from-green-400 to-transparent opacity-20' : 'bg-gradient-to-b from-red-500 to-transparent opacity-10'}`} />
-                            
-                            <div className="text-7xl mb-4 drop-shadow-md relative z-10">{gameResult.type === 'WIN' ? '🎉' : '💀'}</div>
-                            <h2 className={`text-3xl font-black mb-2 tracking-tight relative z-10 ${gameResult.type === 'WIN' ? 'text-green-500' : 'text-gray-800'}`}>
-                                {gameResult.type === 'WIN' ? 'YOU WIN!' : 'GAME OVER'}
-                            </h2>
-                            <p className="text-gray-500 font-bold mb-6 text-sm relative z-10">{gameResult.msg}</p>
-                            
-                            <div className="bg-[#F7F7F9] p-5 rounded-2xl mb-8 border border-gray-100 relative z-10">
-                                <div className="text-[10px] text-gray-400 font-black tracking-widest mb-1">최종 점수</div>
-                                <div className="text-4xl font-black text-indigo-600 tracking-tighter">{score.toLocaleString()}</div>
-                            </div>
-                            
-                            <button 
-                                onClick={() => {
-                                    clearSnapshot();
-                                    navigate('/');
-                                }} 
-                                className="w-full py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black transition shadow-[0_4px_12px_rgba(0,0,0,0.15)] active:scale-95 relative z-10"
-                            >
-                                메인으로 돌아가기
-                            </button>
-                        </div>
-                    </div>
-                )}
+                {isGameOver && gameResult ? (
+                    <GameResultModal
+                        isOpen
+                        resultType={gameResult.type}
+                        message={gameResult.msg}
+                        score={gameResult.score}
+                        combo={gameResult.maxCombo}
+                        isNewRecord={gameResult.isNewRecord}
+                        words={gameResult.words}
+                        isSavingWord={savingResultWord}
+                        onSaveWord={(word) => handleSaveWord(word, 'game_result')}
+                        onPlayAgain={handlePlayAgain}
+                        onGoHome={handleGoHome}
+                        onClose={handleGoHome}
+                    />
+                ) : null}
             </div>
         </div>
     );

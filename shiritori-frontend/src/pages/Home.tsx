@@ -447,7 +447,13 @@ export default function Home() {
       return;
     }
 
-    navigate('/game', { state: { level } });
+    navigate('/game', {
+      state: {
+        level,
+        previousBestScore: displayMyRank?.score ?? 0,
+        previousBestCombo: displayMyRank?.maxCombo ?? 0,
+      },
+    });
   };
 
   const handleOnboardingClose = () => {
