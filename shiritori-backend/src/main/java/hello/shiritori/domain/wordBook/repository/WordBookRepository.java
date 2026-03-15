@@ -19,6 +19,10 @@ public interface WordBookRepository extends JpaRepository<WordBook, Long> {
 
     List<WordBook> findTop10ByProfileIdOrderByCreatedAtDesc(UUID profileId);
 
+    @Query("select wb from WordBook wb join fetch wb.word where wb.profile.id = :userId and wb.id in :wordBookIds")
+    List<WordBook> findAllByUserIdAndWordBookIds(@Param("userId") UUID userId,
+                                                 @Param("wordBookIds") List<Long> wordBookIds);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from WordBook wb where wb.profile.id = :userId")
     int deleteAllByUserId(@Param("userId") UUID userId);

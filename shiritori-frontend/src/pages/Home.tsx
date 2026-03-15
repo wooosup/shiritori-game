@@ -12,7 +12,7 @@ import NicknameModal from '../components/NicknameModal';
 import OnboardingModal from '../components/OnboardingModal';
 import RuleModal from '../components/RuleModal';
 import SearchModal from '../components/SearchModal';
-import QuizModal from '../components/QuizModal';
+import QuizModal, { type QuizModalPreset } from '../components/QuizModal';
 import BottomTabBar, { type BottomTabKey } from '../components/BottomTabBar';
 import InlineState from '../components/InlineState';
 import { signInWithGoogle, signOutNativeGoogle } from '../platform/auth';
@@ -41,6 +41,11 @@ interface BannerWord {
   word: string;
   reading: string;
   meaning: string;
+}
+
+interface HomeLocationState {
+  openModal?: 'quiz' | 'options';
+  quizPreset?: QuizModalPreset;
 }
 
 const LEVEL_OPTIONS = [
@@ -121,6 +126,7 @@ export default function Home() {
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
+  const [quizPreset, setQuizPreset] = useState<QuizModalPreset | null>(null);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -224,8 +230,9 @@ export default function Home() {
   }, []);
 
   const openQuizModal = useCallback(
-    (source: 'deep_link' | 'tab') => {
-      trackEvent('quiz_opened', { platform: runtimePlatform, source });
+    (source: 'deep_link' | 'tab', preset?: QuizModalPreset) => {
+      trackEvent('quiz_opened', { platform: runtimePlatform, source, mode: preset?.mode ?? 'recent' });
+      setQuizPreset(preset ?? null);
       setShowQuizModal(true);
     },
     [runtimePlatform],
@@ -235,6 +242,7 @@ export default function Home() {
     (source: 'dismiss' | 'complete') => {
       trackEvent('quiz_closed', { platform: runtimePlatform, source });
       setShowQuizModal(false);
+      setQuizPreset(null);
     },
     [runtimePlatform],
   );
@@ -368,13 +376,13 @@ export default function Home() {
   }, [authResolved, loading]);
 
   useEffect(() => {
-    const state = location.state as { openModal?: 'quiz' | 'options' } | null;
+    const state = location.state as HomeLocationState | null;
     if (!state?.openModal) {
       return;
     }
 
     if (state.openModal === 'quiz') {
-      openQuizModal('deep_link');
+      openQuizModal('deep_link', state.quizPreset);
     }
 
     if (state.openModal === 'options') {
@@ -502,7 +510,7 @@ export default function Home() {
         />
       ) : null}
       <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
-      <QuizModal isOpen={showQuizModal} onClose={() => closeQuizModal('dismiss')} />
+      <QuizModal isOpen={showQuizModal} preset={quizPreset} onClose={() => closeQuizModal('dismiss')} />
 
       {user && (
         <NicknameModal

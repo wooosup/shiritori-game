@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { apiClient } from '../api/axios';
 import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
+import type { QuizModalPreset } from '../components/QuizModal';
 import GameResultModal, { type GameResultType, type GameResultWord } from '../components/GameResultModal';
 import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
 import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
@@ -54,6 +55,7 @@ interface GameResultState {
 }
 
 interface WordBookSnapshotItem {
+    id?: number;
     word: string;
     reading?: string;
     meaning?: string;
@@ -428,15 +430,18 @@ export default function GamePage() {
         }
     }, [addMessage, clearSnapshot, level, navigate, showToast]);
 
-    const fetchSavedWordSnapshots = useCallback(async () => {
+    const fetchSavedWordSnapshots = useCallback(async (): Promise<WordBookSnapshotItem[]> => {
         try {
             const response = await apiClient.get('/wordBooks');
             if (response.data.code === 200) {
-                setSavedWordSnapshots(response.data.data);
+                const snapshots = Array.isArray(response.data.data) ? response.data.data as WordBookSnapshotItem[] : [];
+                setSavedWordSnapshots(snapshots);
+                return snapshots;
             }
         } catch (error: unknown) {
             captureError(error, { action: 'game_result_wordbook_snapshot', level });
         }
+        return [];
     }, [level]);
 
     const handleTimeOver = useCallback(async () => {
@@ -676,7 +681,9 @@ export default function GamePage() {
                     }
 
                     const resultWord = gameResult?.words.find((entry) => normalizeWordKey(entry.word) === normalizeWordKey(word));
+                    const wordBookIdRaw = Number((res.data?.data as { id?: unknown } | undefined)?.id);
                     return [...prev, {
+                        id: Number.isFinite(wordBookIdRaw) ? wordBookIdRaw : undefined,
                         word,
                         reading: resultWord?.reading,
                         meaning: resultWord?.meaning,
@@ -901,9 +908,34 @@ export default function GamePage() {
                 }
             }
 
-            trackEvent('quiz_opened', { source: 'game_result_review', level });
+            const refreshedSnapshots = await fetchSavedWordSnapshots();
+            const wordLookup = new Map<string, WordBookSnapshotItem>();
+            const snapshotSource = refreshedSnapshots.length > 0 ? refreshedSnapshots : savedWordSnapshots;
+            snapshotSource.forEach((entry) => {
+                wordLookup.set(normalizeWordKey(entry.word), entry);
+            });
+
+            const selectedWordBookIds = reviewWords
+                .map((word) => wordLookup.get(normalizeWordKey(word.word))?.id)
+                .filter((id): id is number => Number.isFinite(id));
+
+            const quizPreset: QuizModalPreset = selectedWordBookIds.length > 0
+                ? {
+                    mode: 'selected',
+                    level: level as QuizModalPreset['level'],
+                    selectedWordBookIds,
+                    title: '복습 퀴즈',
+                    subtitle: '방금 플레이한 단어 위주로 문제를 만들었어요.',
+                }
+                : {
+                    mode: 'focus',
+                    level: level as QuizModalPreset['level'],
+                    title: '집중 복습',
+                    subtitle: '저장된 단어를 중심으로 복습 퀴즈를 준비했어요.',
+                };
+
             clearSnapshot();
-            navigate('/', { state: { openModal: 'quiz' } });
+            navigate('/', { state: { openModal: 'quiz', quizPreset } });
         } catch (error: unknown) {
             captureError(error, { action: 'game_result_review_quiz', level });
             showToast('복습 퀴즈를 열지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');

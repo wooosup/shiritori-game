@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -41,9 +42,12 @@ public class WordBookController {
     }
 
     @GetMapping("/quiz")
-    public ApiResponse<List<QuizResponse>> getQuiz(@AuthenticationPrincipal Jwt jwt) {
+    public ApiResponse<List<QuizResponse>> getQuiz(@AuthenticationPrincipal Jwt jwt,
+                                                   @RequestParam(required = false) String mode,
+                                                   @RequestParam(name = "selectedWordBookIds", required = false) List<Long> selectedIds,
+                                                   @RequestParam(required = false) String level) {
         UUID userId = UUID.fromString(jwt.getSubject());
-        List<QuizResponse> quiz = wordBookService.quiz(userId);
+        List<QuizResponse> quiz = wordBookService.quiz(userId, mode, selectedIds, level);
         return ApiResponse.ok(quiz);
     }
 
