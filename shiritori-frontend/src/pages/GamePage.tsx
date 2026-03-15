@@ -6,7 +6,7 @@ import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import GameResultModal, { type GameResultType, type GameResultWord } from '../components/GameResultModal';
 import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
 import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
-import { playErrorSfx } from '../sound/effects';
+import { playComboSfx, playErrorSfx, playGameResultSfx, playSuccessSfx } from '../sound/effects';
 import { isNativeApp } from '../platform/runtime';
 import { captureError, trackEvent } from '../lib/telemetry';
 import './GamePage.css';
@@ -193,8 +193,11 @@ export default function GamePage() {
     const viewportRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const comboBurstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isGameStarted = useRef(false);
+    const previousComboRef = useRef(0);
     const { validateWord } = useShiritoriValidation(history);
+    const [comboBurstActive, setComboBurstActive] = useState(false);
 
     const clearSnapshot = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -258,6 +261,8 @@ export default function GamePage() {
         setScore(snapshot.score);
         setCombo(snapshot.combo);
         setBestCombo(snapshot.bestCombo);
+        previousComboRef.current = snapshot.combo;
+        setComboBurstActive(false);
         setInputWord(snapshot.inputWord);
         setIsPaused(true);
         setPauseReason('background');
@@ -314,6 +319,8 @@ export default function GamePage() {
             setPauseReason(null);
             setResumeCountdown(null);
             setSavingResultWord(null);
+            previousComboRef.current = 0;
+            setComboBurstActive(false);
             clearSnapshot();
 
             const res = await apiClient.post('/games/start', { level });
@@ -439,8 +446,42 @@ export default function GamePage() {
             if (toastTimerRef.current) {
                 clearTimeout(toastTimerRef.current);
             }
+            if (comboBurstTimerRef.current) {
+                clearTimeout(comboBurstTimerRef.current);
+            }
         };
     }, []);
+
+    useEffect(() => {
+        const previousCombo = previousComboRef.current;
+        if (combo > previousCombo) {
+            if (combo > 1) {
+                playComboSfx();
+                setComboBurstActive(true);
+                if (comboBurstTimerRef.current) {
+                    clearTimeout(comboBurstTimerRef.current);
+                }
+                comboBurstTimerRef.current = setTimeout(() => {
+                    setComboBurstActive(false);
+                    comboBurstTimerRef.current = null;
+                }, 900);
+            } else {
+                playSuccessSfx();
+            }
+        } else if (combo === 0) {
+            setComboBurstActive(false);
+        }
+
+        previousComboRef.current = combo;
+    }, [combo]);
+
+    useEffect(() => {
+        if (!gameResult) {
+            return;
+        }
+
+        playGameResultSfx(gameResult.type);
+    }, [gameResult]);
 
     // --- 복귀 카운트다운 ---
     useEffect(() => {
@@ -789,7 +830,7 @@ export default function GamePage() {
                             </button>
 
                             {combo > 1 && (
-                                <div className="flex flex-col items-end animate-[pulse_1s_ease-in-out_infinite]">
+                                <div className={`flex flex-col items-end ${comboBurstActive ? 'animate-[pulse_0.9s_cubic-bezier(0.16,1,0.3,1)]' : ''}`}>
                                     <span className="text-[9px] text-orange-500 font-black tracking-widest mb-0.5">콤보</span>
                                     <span className="text-xl font-black text-orange-500 italic leading-none">{combo}</span>
                                 </div>

@@ -580,7 +580,7 @@ export default function Home() {
                 onClick={toggleSfx}
                 className="flex w-full items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-700 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
-                <span>효과음</span>
+                <span>사운드/진동</span>
                 <span className={sfxEnabled ? 'text-indigo-600' : 'text-red-500'}>{sfxEnabled ? '켜짐' : '꺼짐'}</span>
               </button>
 

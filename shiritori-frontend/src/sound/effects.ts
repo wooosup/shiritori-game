@@ -1,19 +1,72 @@
 import { useSettingsStore } from '../stores/settingsStore';
 
-type EffectName = 'button' | 'error';
+type EffectName = 'button' | 'error' | 'success' | 'combo' | 'win' | 'lose';
+type HapticPattern = number | number[];
 
-const EFFECT_SOURCES: Record<EffectName, string[]> = {
-  button: ['/poka01.m4a', '/poka01.mp3'],
-  error: ['/blip03.m4a', '/blip03.mp3'],
+interface EffectConfig {
+  sources: string[];
+  volume: number;
+  playbackRate: number;
+  cooldownMs: number;
+  haptic?: HapticPattern;
+}
+
+const BUTTON_EFFECT_SOURCES = ['/poka01.m4a', '/poka01.mp3'];
+const ERROR_EFFECT_SOURCES = ['/blip03.m4a', '/blip03.mp3'];
+
+const EFFECT_CONFIGS: Record<EffectName, EffectConfig> = {
+  button: {
+    sources: BUTTON_EFFECT_SOURCES,
+    volume: 1.0,
+    playbackRate: 1.0,
+    cooldownMs: 90,
+  },
+  error: {
+    sources: ERROR_EFFECT_SOURCES,
+    volume: 1.0,
+    playbackRate: 1.0,
+    cooldownMs: 140,
+    haptic: [24, 18, 32],
+  },
+  success: {
+    sources: BUTTON_EFFECT_SOURCES,
+    volume: 0.9,
+    playbackRate: 1.08,
+    cooldownMs: 120,
+    haptic: 18,
+  },
+  combo: {
+    sources: BUTTON_EFFECT_SOURCES,
+    volume: 1.0,
+    playbackRate: 1.24,
+    cooldownMs: 220,
+    haptic: [18, 14, 18],
+  },
+  win: {
+    sources: BUTTON_EFFECT_SOURCES,
+    volume: 1.0,
+    playbackRate: 1.3,
+    cooldownMs: 300,
+    haptic: [20, 18, 42],
+  },
+  lose: {
+    sources: ERROR_EFFECT_SOURCES,
+    volume: 0.92,
+    playbackRate: 0.9,
+    cooldownMs: 300,
+    haptic: [28, 22, 36],
+  },
 };
 
 const warnedEffects = new Set<EffectName>();
 const PLAYER_POOL_SIZE = 3;
 const audioPools = new Map<EffectName, HTMLAudioElement[]>();
 const poolCursor = new Map<EffectName, number>();
+const lastPlayedByEffect = new Map<EffectName, number>();
 let lastPlayAt = 0;
 let primed = false;
 let lastTriggeredButtonAt = 0;
+let lastHapticAt = 0;
 
 function toAbsoluteUrl(path: string): string {
   if (typeof window === 'undefined') {
@@ -23,7 +76,7 @@ function toAbsoluteUrl(path: string): string {
 }
 
 function resolveEffectSource(name: EffectName): string {
-  const candidates = EFFECT_SOURCES[name];
+  const candidates = EFFECT_CONFIGS[name].sources;
   if (typeof document === 'undefined') {
     return candidates[0];
   }
@@ -72,7 +125,7 @@ function primeAudioPools(): void {
     return;
   }
   primed = true;
-  (Object.keys(EFFECT_SOURCES) as EffectName[]).forEach((name) => {
+  (Object.keys(EFFECT_CONFIGS) as EffectName[]).forEach((name) => {
     ensureAudioPool(name);
   });
 }
@@ -94,21 +147,38 @@ function playEffect(name: EffectName, volume: number): void {
   }
 
   const now = Date.now();
+  const config = EFFECT_CONFIGS[name];
+  const lastEffectAt = lastPlayedByEffect.get(name) ?? 0;
+  if (now - lastEffectAt < config.cooldownMs) {
+    return;
+  }
+
   if (now - lastPlayAt < 18) {
     return;
   }
   lastPlayAt = now;
+  lastPlayedByEffect.set(name, now);
 
   const player = getNextPlayer(name);
   player.volume = volume;
   player.currentTime = 0;
+  player.playbackRate = config.playbackRate;
   player.muted = false;
-  void player.play().catch(() => {
-    if (!warnedEffects.has(name)) {
-      warnedEffects.add(name);
-      console.warn(`[sfx] ${name} sound play failed`);
+  if (config.haptic && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    if (now - lastHapticAt >= 40) {
+      lastHapticAt = now;
+      navigator.vibrate(config.haptic);
     }
-  });
+  }
+  const playResult = player.play();
+  if (playResult && typeof playResult.catch === 'function') {
+    void playResult.catch(() => {
+      if (!warnedEffects.has(name)) {
+        warnedEffects.add(name);
+        console.warn(`[sfx] ${name} sound play failed`);
+      }
+    });
+  }
 }
 
 export function playButtonSfx(): void {
@@ -117,6 +187,18 @@ export function playButtonSfx(): void {
 
 export function playErrorSfx(): void {
   playEffect('error', 1.0);
+}
+
+export function playSuccessSfx(): void {
+  playEffect('success', EFFECT_CONFIGS.success.volume);
+}
+
+export function playComboSfx(): void {
+  playEffect('combo', EFFECT_CONFIGS.combo.volume);
+}
+
+export function playGameResultSfx(result: 'win' | 'lose'): void {
+  playEffect(result, EFFECT_CONFIGS[result].volume);
 }
 
 export function installGlobalButtonClickSfx(): () => void {
