@@ -6,6 +6,8 @@ export interface EnvSource {
   VITE_SUPABASE_ANON_KEY?: string;
   VITE_GOOGLE_WEB_CLIENT_ID?: string;
   VITE_GOOGLE_ANDROID_CLIENT_ID?: string;
+  VITE_SENTRY_DSN?: string;
+  VITE_SENTRY_ENVIRONMENT?: string;
 }
 
 export interface AppEnv {
@@ -14,6 +16,8 @@ export interface AppEnv {
   supabaseAnonKey: string;
   googleWebClientId: string;
   googleAndroidClientId: string;
+  sentryDsn: string;
+  sentryEnvironment: string;
 }
 
 export type AppRuntime = 'web' | 'native';
@@ -48,6 +52,8 @@ export function resolveRuntimeEnv(source: EnvSource, runtime: AppRuntime): AppEn
     source.VITE_SUPABASE_ANON_KEY?.trim() || (runtime === 'web' ? DEFAULT_SUPABASE_ANON_KEY : '');
   const googleWebClientId = source.VITE_GOOGLE_WEB_CLIENT_ID?.trim() || '';
   const googleAndroidClientId = source.VITE_GOOGLE_ANDROID_CLIENT_ID?.trim() || '';
+  const sentryDsn = source.VITE_SENTRY_DSN?.trim() || '';
+  const sentryEnvironment = source.VITE_SENTRY_ENVIRONMENT?.trim() || '';
 
   const resolved: AppEnv = {
     apiBaseUrl:
@@ -62,6 +68,8 @@ export function resolveRuntimeEnv(source: EnvSource, runtime: AppRuntime): AppEn
         : supabaseAnonKey,
     googleWebClientId,
     googleAndroidClientId,
+    sentryDsn,
+    sentryEnvironment,
   };
 
   if (runtime === 'native') {
@@ -86,5 +94,7 @@ export const appEnv = loadAppEnv(
     VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
     VITE_GOOGLE_WEB_CLIENT_ID: import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID,
     VITE_GOOGLE_ANDROID_CLIENT_ID: import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID,
+    VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
+    VITE_SENTRY_ENVIRONMENT: import.meta.env.VITE_SENTRY_ENVIRONMENT,
   },
 );

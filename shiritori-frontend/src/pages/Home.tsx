@@ -13,9 +13,12 @@ import RuleModal from '../components/RuleModal';
 import SearchModal from '../components/SearchModal';
 import QuizModal from '../components/QuizModal';
 import BottomTabBar, { type BottomTabKey } from '../components/BottomTabBar';
+import InlineState from '../components/InlineState';
 import { signInWithGoogle, signOutNativeGoogle } from '../platform/auth';
+import { getRuntimePlatform } from '../platform/runtime';
 import { type ThemePreference, useSettingsStore } from '../stores/settingsStore';
 import { SUPPORT_MAILTO } from '../constants/support';
+import { captureError, setTelemetryUser, trackEvent } from '../lib/telemetry';
 import StartPage from './StartPage';
 
 interface ApiResponse<T> {
@@ -134,6 +137,8 @@ export default function Home() {
   const { sfxEnabled, toggleSfx, themePreference, resolvedTheme, setThemePreference } = useSettingsStore();
 
   const isMounted = useRef(true);
+  const pendingLoginAttempt = useRef(false);
+  const runtimePlatform = getRuntimePlatform();
 
   const displayMyRank = useMemo(() => {
     return myRank ?? findMyBestFromList(rankings, nickname);
@@ -178,7 +183,7 @@ export default function Home() {
       // ignore and show fallback message below
     }
     if (isMounted.current) {
-      setRankingsError('랭킹을 불러오지 못했어요.');
+      setRankingsError('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   }, []);
 
@@ -194,7 +199,7 @@ export default function Home() {
       // no-op: fallback below
     }
     if (isMounted.current) {
-      setTotalWordsError('단어 수를 불러오지 못했어요.');
+      setTotalWordsError('단어 수를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   }, []);
 
@@ -211,9 +216,25 @@ export default function Home() {
     }
     if (isMounted.current) {
       setBannerWords([]);
-      setBannerError('배너 단어를 불러오지 못했어요.');
+      setBannerError('오늘의 단어를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   }, []);
+
+  const openQuizModal = useCallback(
+    (source: 'deep_link' | 'tab') => {
+      trackEvent('quiz_opened', { platform: runtimePlatform, source });
+      setShowQuizModal(true);
+    },
+    [runtimePlatform],
+  );
+
+  const closeQuizModal = useCallback(
+    (source: 'dismiss' | 'complete') => {
+      trackEvent('quiz_closed', { platform: runtimePlatform, source });
+      setShowQuizModal(false);
+    },
+    [runtimePlatform],
+  );
 
   useEffect(() => {
     isMounted.current = true;
@@ -298,11 +319,16 @@ export default function Home() {
       if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
         setIsLoggingIn(false);
         setLoginError(null);
+        if (pendingLoginAttempt.current) {
+          trackEvent('login_succeeded', { platform: runtimePlatform });
+          pendingLoginAttempt.current = false;
+        }
         void syncAuthenticatedState(session);
         return;
       }
 
       if (event === 'INITIAL_SESSION' && !session) {
+        pendingLoginAttempt.current = false;
         setUser(null);
         setNickname(null);
         setMyRank(null);
@@ -310,6 +336,7 @@ export default function Home() {
       }
 
       if (event === 'SIGNED_OUT') {
+        pendingLoginAttempt.current = false;
         setIsLoggingIn(false);
         setUser(null);
         setNickname(null);
@@ -321,7 +348,11 @@ export default function Home() {
       isMounted.current = false;
       authListener.subscription.unsubscribe();
     };
-  }, [fetchBannerWords, fetchRankings, fetchWordCount]);
+  }, [fetchBannerWords, fetchRankings, fetchWordCount, runtimePlatform]);
+
+  useEffect(() => {
+    setTelemetryUser(user ? { id: user.id } : null);
+  }, [user]);
 
   useEffect(() => {
     const state = location.state as { openModal?: 'quiz' | 'options' } | null;
@@ -330,7 +361,7 @@ export default function Home() {
     }
 
     if (state.openModal === 'quiz') {
-      setShowQuizModal(true);
+      openQuizModal('deep_link');
     }
 
     if (state.openModal === 'options') {
@@ -338,15 +369,20 @@ export default function Home() {
     }
 
     navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state, navigate, openQuizModal]);
 
   const handleLogin = async () => {
     setLoginError(null);
     setIsLoggingIn(true);
+    pendingLoginAttempt.current = true;
+    trackEvent('login_attempted', { platform: runtimePlatform });
     try {
       await signInWithGoogle();
     } catch (error: unknown) {
       console.error('로그인 시작 실패:', error);
+      pendingLoginAttempt.current = false;
+      trackEvent('login_failed', { platform: runtimePlatform });
+      captureError(error, { action: 'login', platform: runtimePlatform });
       setLoginError(getApiErrorMessage(error, '로그인을 시작하지 못했어요. 잠시 후 다시 시도해주세요.'));
     } finally {
       setIsLoggingIn(false);
@@ -363,10 +399,14 @@ export default function Home() {
   const handleDeleteAccount = async () => {
     setOptionsError(null);
     setIsDeletingAccount(true);
+    trackEvent('account_delete_attempted', { platform: runtimePlatform });
     try {
       await apiClient.delete('/profiles/me');
+      trackEvent('account_delete_succeeded', { platform: runtimePlatform });
       handleLogout();
-    } catch {
+    } catch (error: unknown) {
+      trackEvent('account_delete_failed', { platform: runtimePlatform });
+      captureError(error, { action: 'account_delete', platform: runtimePlatform });
       setOptionsError('계정 탈퇴에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsDeletingAccount(false);
@@ -408,7 +448,7 @@ export default function Home() {
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_#eef2ff_0%,_#f7f7f9_38%,_#f7f7f9_100%)] dark:bg-[radial-gradient(circle_at_top_right,_#1f2937_0%,_#0f172a_42%,_#020617_100%)]">
       <SearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
-      <QuizModal isOpen={showQuizModal} onClose={() => setShowQuizModal(false)} />
+      <QuizModal isOpen={showQuizModal} onClose={() => closeQuizModal('dismiss')} />
 
       {user && (
         <NicknameModal
@@ -643,30 +683,28 @@ export default function Home() {
         {(totalWordsError || bannerError) ? (
           <div className="w-full max-w-md mb-4 space-y-2">
             {totalWordsError ? (
-              <div className="flex items-center justify-between rounded-xl bg-red-50 border border-red-100 px-3 py-2">
-                <p className="text-xs font-medium text-red-600">{totalWordsError}</p>
-                <button
-                  data-sfx="off"
-                  onClick={() => fetchWordCount()}
-                  className="text-xs font-bold text-red-600 underline underline-offset-2"
-                >
-                  다시 시도
-                </button>
-                <a href={SUPPORT_MAILTO} className="text-xs font-bold text-red-600 underline underline-offset-2">문의하기</a>
-              </div>
+              <InlineState
+                type="error"
+                message={totalWordsError}
+                actionLabel="다시 시도"
+                onAction={() => {
+                  fetchWordCount().catch(() => {});
+                }}
+                secondaryActionLabel="문의하기"
+                secondaryActionHref={SUPPORT_MAILTO}
+              />
             ) : null}
             {bannerError ? (
-              <div className="flex items-center justify-between rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
-                <p className="text-xs font-medium text-amber-700">{bannerError}</p>
-                <button
-                  data-sfx="off"
-                  onClick={() => fetchBannerWords()}
-                  className="text-xs font-bold text-amber-700 underline underline-offset-2"
-                >
-                  다시 시도
-                </button>
-                <a href={SUPPORT_MAILTO} className="text-xs font-bold text-amber-700 underline underline-offset-2">문의하기</a>
-              </div>
+              <InlineState
+                type="error"
+                message={bannerError}
+                actionLabel="다시 시도"
+                onAction={() => {
+                  fetchBannerWords().catch(() => {});
+                }}
+                secondaryActionLabel="문의하기"
+                secondaryActionHref={SUPPORT_MAILTO}
+              />
             ) : null}
           </div>
         ) : null}
@@ -754,16 +792,17 @@ export default function Home() {
           </div>
 
           {rankingsError ? (
-            <div className="mx-4 mb-4 mt-1 flex items-center justify-between rounded-xl border border-red-100 bg-red-50 px-3 py-2">
-              <p className="text-xs font-medium text-red-600">{rankingsError}</p>
-              <button
-                data-sfx="off"
-                onClick={() => fetchRankings()}
-                className="text-xs font-bold text-red-600 underline underline-offset-2"
-              >
-                다시 시도
-              </button>
-              <a href={SUPPORT_MAILTO} className="text-xs font-bold text-red-600 underline underline-offset-2">문의하기</a>
+            <div className="mx-4 mb-4 mt-1">
+              <InlineState
+                type="error"
+                message={rankingsError}
+                actionLabel="다시 시도"
+                onAction={() => {
+                  fetchRankings().catch(() => {});
+                }}
+                secondaryActionLabel="문의하기"
+                secondaryActionHref={SUPPORT_MAILTO}
+              />
             </div>
           ) : null}
         </div>
@@ -775,7 +814,7 @@ export default function Home() {
         current={currentBottomTab}
         onHome={() => window.scrollTo(0, 0)}
         onWordBook={() => navigate('/wordbook')}
-        onQuiz={() => setShowQuizModal(true)}
+        onQuiz={() => openQuizModal('tab')}
         onRanking={() => navigate('/ranking')}
         onOptions={() => setShowOptionsModal(true)}
       />

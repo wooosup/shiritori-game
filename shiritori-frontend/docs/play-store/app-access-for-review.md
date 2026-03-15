@@ -22,11 +22,30 @@ If Google sign-in is temporarily unavailable, contact:
 useop0821@gmail.com
 ```
 
+대체 템플릿(심사자가 본인 Google 계정으로 로그인 가능할 때):
+
+```text
+This app requires Google login to access gameplay.
+
+How to access:
+1) Launch app
+2) Tap "Google로 시작하기"
+3) Sign in with any Google account
+
+No invitation code is required.
+No paywall is required.
+
+Support contact:
+useop0821@gmail.com
+```
+
 ## 2) 운영 규칙
 
 1. 심사 기간 동안 테스트 계정 삭제/비활성화 금지
 2. 2FA가 걸린 계정은 심사용으로 사용하지 않음
 3. 국가 제한/기기 제한이 있다면 별도 설명 기재
+4. 심사 전날 테스트 계정으로 실제 로그인 재확인
+5. 계정 잠금/비밀번호 만료 정책이 있으면 심사 완료까지 예외 처리
 
 ## 3) 사전 점검
 
@@ -40,11 +59,18 @@ useop0821@gmail.com
 6. 앱 내 `옵션 > 계정 탈퇴` 진입 가능 여부 확인
 7. 운영 참고 정보가 필요하면 아래 공개 URL 확인
    - 문의 메일: `useop0821@gmail.com`
-   - 공지 URL: `/notices/latest.json`
-   - 서비스 상태 URL: `/api/healthz`
+   - 공지 URL: `https://shiritori-game-gold.vercel.app/notices/latest.json`
+   - 서비스 상태 URL: `https://shiritori-game-l4dh.onrender.com/api/healthz`
 
 ## 4) 관련 제출 항목 링크
 
-1. Privacy policy URL: `/legal/privacy-ko.html`
-2. Account deletion URL: `/legal/account-deletion-ko.html`
+1. Privacy policy URL: `https://shiritori-game-gold.vercel.app/legal/privacy-ko.html`
+2. Account deletion URL: `https://shiritori-game-gold.vercel.app/legal/account-deletion-ko.html`
 3. Data safety 기준표: `docs/play-store/data-safety-matrix.md`
+
+## 5) 심사 직전 빠른 실패 케이스 점검
+
+1. 로그인 취소(계정 선택창 닫기) 후 앱이 멈추지 않고 재시도 가능
+2. 네트워크 단절 시 로그인/데이터 로딩 오류 문구 노출
+3. 옵션 진입 후 정책 링크와 계정 탈퇴 버튼이 정상 노출
+4. 로그인 후 1분 내 게임 진입 가능

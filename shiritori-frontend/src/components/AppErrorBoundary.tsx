@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { captureError } from '../lib/telemetry';
 
 interface Props {
   children: ReactNode;
@@ -27,6 +28,10 @@ export default class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('[AppErrorBoundary]', error, info.componentStack);
+    captureError(error, {
+      area: 'AppErrorBoundary',
+      componentStack: info.componentStack ?? '',
+    });
   }
 
   private handleReset = (): void => {
@@ -65,4 +70,3 @@ export default class AppErrorBoundary extends Component<Props, State> {
     );
   }
 }
-

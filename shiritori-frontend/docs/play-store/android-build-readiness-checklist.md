@@ -61,12 +61,24 @@ cd android && ./gradlew bundleRelease
 npm run android:release
 ```
 
+권장 사전 검증(빠른 실패 확인):
+
+```bash
+cd android
+./gradlew tasks --all > /dev/null
+./gradlew bundleRelease --dry-run
+```
+
+주의:
+- `--dry-run`은 실제 AAB를 만들지 않으므로, 최종 업로드 전에는 `npm run android:release`를 반드시 1회 실행한다
+
 ## 5) 성공 기준
 
 1. `android/app/build/outputs/bundle/release/app-release.aab`가 생성된다
 2. 빌드 로그에 `SDK location not found` 오류가 없다
 3. 빌드 로그에 `Missing Android release signing env` 오류가 없다
 4. Play Console Internal testing에 업로드 가능한 AAB가 준비된다
+5. Internal testing 설치 후 실기기 smoke 1회 이상 통과한다
 
 ## 6) 실패 시 우선 확인
 
@@ -76,3 +88,7 @@ npm run android:release
    - 4개 `ANDROID_KEY*` 환경 변수 확인
 3. Google 로그인 `code 10`
    - Google Cloud Console의 Android OAuth Client 패키지명 `com.shiritori.game`와 SHA-1 확인
+4. 로그인은 성공했는데 앱 복귀 실패
+   - Supabase Redirect URL의 `shiritori://auth/callback` 확인
+5. 계정 탈퇴 실패가 반복됨
+   - 백엔드 health/API 상태와 네트워크 연결을 먼저 확인

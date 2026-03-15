@@ -7,6 +7,7 @@ import { useShiritoriValidation } from '../hooks/useShiritoriValidation';
 import { ShieldCheckIcon, ArrowRightIcon, CheckCircleIcon, ExclamationCircleIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/solid';// ✅ 백엔드 응답 타입
 import { playErrorSfx } from '../sound/effects';
 import { isNativeApp } from '../platform/runtime';
+import { captureError, trackEvent } from '../lib/telemetry';
 import './GamePage.css';
 
 interface TurnResponse {
@@ -245,6 +246,7 @@ export default function GamePage() {
             const res = await apiClient.post('/games/start', { level });
             if (res.data.code === 200) {
                 const data = res.data.data;
+                trackEvent('game_started', { level, gameId: data.gameId });
                 setGameId(data.gameId);
                 setCombo(0);
                 setScore(0);
@@ -259,7 +261,8 @@ export default function GamePage() {
                 });
                 setTimeout(() => inputRef.current?.focus(), 10);
             }
-        } catch {
+        } catch (error: unknown) {
+            captureError(error, { action: 'game_start', level });
             showToast('게임 시작에 실패해 홈으로 이동합니다.', 'error');
             setTimeout(() => {
                 navigate('/');
@@ -273,13 +276,15 @@ export default function GamePage() {
         if (isGameOver) return;
         setIsGameOver(true);
         setGameResult({ type: 'LOSE', msg: '⏰ 시간 초과!' });
+        trackEvent('game_ended', { level, result: 'timeout', score, combo });
         clearSnapshot();
         try {
             if (gameId) await apiClient.post(`/games/${gameId}/timeout`);
         } catch (e) {
             console.error("시간 초과 처리 에러", e);
+            captureError(e, { action: 'game_timeout', level });
         }
-    }, [clearSnapshot, gameId, isGameOver]);
+    }, [clearSnapshot, combo, gameId, isGameOver, level, score]);
 
     // --- 초기화 ---
     useEffect(() => {
@@ -458,9 +463,11 @@ export default function GamePage() {
         try {
             const res = await apiClient.post('/wordBooks', { word });
             if (res.data.code === 200) {
+                trackEvent('wordbook_saved', { source: 'game_result', level });
                 showToast("단어장에 저장했습니다.", 'success');
             }
         } catch (error: unknown) {
+            captureError(error, { action: 'wordbook_save', source: 'game_result', level });
             const msg = getApiErrorMessage(error, "저장에 실패했습니다.");
             if (msg.includes("이미")) {
                 showToast("이미 단어장에 있는 단어입니다.", 'error');
@@ -520,8 +527,12 @@ export default function GamePage() {
 
     const handleQuit = async () => {
         if (gameId && !isGameOver) {
+            trackEvent('game_ended', { level, result: 'quit', score, combo });
             try { await apiClient.post(`/games/${gameId}/quit`); }
-            catch (e) { console.error("포기 에러", e); }
+            catch (e) {
+                console.error("포기 에러", e);
+                captureError(e, { action: 'game_quit', level });
+            }
         }
         clearSnapshot();
         navigate('/');
@@ -566,6 +577,12 @@ export default function GamePage() {
             } else {
                 setIsGameOver(true);
                 const isWin = data.status === 'WIN';
+                trackEvent('game_ended', {
+                    level,
+                    result: isWin ? 'win' : 'lose',
+                    score: data.currentScore,
+                    combo: data.currentCombo,
+                });
                 setGameResult({ type: isWin ? 'WIN' : 'LOSE', msg: data.message });
                 inputRef.current?.blur();
                 clearSnapshot();
@@ -576,6 +593,7 @@ export default function GamePage() {
             const status = getApiErrorStatus(error);
 
             if (isExpiredSessionError(serverMsg, status)) {
+                captureError(error, { action: 'game_turn_session_expired', level, status });
                 showToast('게임 세션이 만료되어 새 게임으로 시작합니다.', 'error');
                 await startGame();
                 return;
@@ -583,6 +601,9 @@ export default function GamePage() {
 
             if (status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 403) {
                 playErrorSfx();
+            }
+            if (status === undefined || status >= 500) {
+                captureError(error, { action: 'game_turn', level, status });
             }
             setErrorMessage(normalizeSubmitErrorMessage(serverMsg, status));
             setInputWord(userInput);

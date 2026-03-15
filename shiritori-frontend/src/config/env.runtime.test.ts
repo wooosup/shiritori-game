@@ -27,5 +27,7 @@ describe('resolveRuntimeEnv placeholder policy', () => {
 
     expect(resolved.apiBaseUrl).toBe('http://localhost:8080/api');
     expect(resolved.supabaseUrl).toBe('https://example.supabase.co');
+    expect(resolved.sentryDsn).toBe('');
+    expect(resolved.sentryEnvironment).toBe('');
   });
 });

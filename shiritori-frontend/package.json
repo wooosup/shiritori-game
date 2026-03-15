@@ -29,6 +29,7 @@
     "@capacitor/browser": "^7.0.0",
     "@fontsource/zen-kaku-gothic-antique": "^5.2.8",
     "@heroicons/react": "^2.2.0",
+    "@sentry/react": "^10.43.0",
     "@southdevs/capacitor-google-auth": "^7.0.0",
     "@supabase/supabase-js": "^2.93.3",
     "axios": "^1.13.4",

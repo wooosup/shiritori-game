@@ -46,10 +46,12 @@ export default function RankingPage() {
   const [myRank, setMyRank] = useState<Ranking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [myRankError, setMyRankError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMyRankError(null);
 
     try {
       const [allResponse, myResponse] = await Promise.allSettled([
@@ -67,13 +69,14 @@ export default function RankingPage() {
         setMyRank(toRanking(myResponse.value.data.data));
       } else {
         setMyRank(null);
+        setMyRankError('내 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
       }
 
       if (allResponse.status !== 'fulfilled') {
-        setError('랭킹을 불러오지 못했어요.');
+        setError('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
       }
     } catch {
-      setError('랭킹을 불러오지 못했어요.');
+      setError('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setLoading(false);
     }
@@ -132,6 +135,15 @@ export default function RankingPage() {
             </div>
           ) : loading ? (
             <InlineState type="loading" message="내 기록을 불러오는 중..." />
+          ) : myRankError ? (
+            <InlineState
+              type="error"
+              message={myRankError}
+              actionLabel="다시 시도"
+              onAction={() => {
+                void fetchAll();
+              }}
+            />
           ) : (
             <InlineState type="empty" message="아직 내 기록이 없습니다." />
           )}

@@ -1,5 +1,6 @@
 import './StartPage.css';
 import { SUPPORT_MAILTO } from '../constants/support';
+import InlineState from '../components/InlineState';
 
 interface StartPageProps {
   onGoogleLogin: () => void;
@@ -38,9 +39,19 @@ export default function StartPage({ onGoogleLogin, loading = false, errorMessage
 
         {errorMessage ? (
           <div className="start-error-box" role="alert">
-            <p className="start-error">{errorMessage}</p>
+            <InlineState
+              type="error"
+              message={errorMessage}
+              actionLabel={loading ? undefined : '다시 시도'}
+              onAction={() => {
+                if (!loading) {
+                  onGoogleLogin();
+                }
+              }}
+              secondaryActionLabel="문의하기"
+              secondaryActionHref={SUPPORT_MAILTO}
+            />
             <p className="start-error-help">네트워크 상태를 확인한 뒤 다시 시도해 주세요.</p>
-            <a href={SUPPORT_MAILTO} className="start-error-link">문의하기</a>
           </div>
         ) : null}
       </main>

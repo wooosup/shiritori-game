@@ -21,10 +21,14 @@ describe('resolveRuntimeEnv', () => {
         VITE_API_URL: 'https://api.example.com/api/',
         VITE_SUPABASE_URL: 'https://example.supabase.co',
         VITE_SUPABASE_ANON_KEY: 'anon-key',
+        VITE_SENTRY_DSN: ' https://public@sentry.example/1 ',
+        VITE_SENTRY_ENVIRONMENT: ' production ',
       },
       'web',
     );
 
     expect(env.apiBaseUrl).toBe('https://api.example.com/api');
+    expect(env.sentryDsn).toBe('https://public@sentry.example/1');
+    expect(env.sentryEnvironment).toBe('production');
   });
 });

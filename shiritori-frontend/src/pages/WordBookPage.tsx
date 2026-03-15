@@ -4,6 +4,7 @@ import { apiClient } from '../api/axios';
 import { getApiErrorMessage, getApiErrorStatus } from '../api/error';
 import BottomTabBar from '../components/BottomTabBar';
 import InlineState from '../components/InlineState';
+import { captureError, trackEvent } from '../lib/telemetry';
 
 interface WordBookItem {
   id: number;
@@ -59,7 +60,7 @@ export default function WordBookPage() {
       if (getApiErrorStatus(error) === 401) {
         setErrorMsg('로그인이 만료되었습니다. 홈에서 다시 로그인해 주세요.');
       } else {
-        setErrorMsg(getApiErrorMessage(error, '단어장을 불러오지 못했습니다.'));
+        setErrorMsg(getApiErrorMessage(error, '단어장을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'));
       }
     } finally {
       setLoading(false);
@@ -80,11 +81,13 @@ export default function WordBookPage() {
         word: inputText.trim(),
       });
       if (response.data.code === 200) {
+        trackEvent('wordbook_saved', { source: 'wordbook_page' });
         setInputText('');
         await fetchWords();
       }
     } catch (error: unknown) {
-      setErrorMsg(getApiErrorMessage(error, '단어 추가에 실패했습니다.'));
+      captureError(error, { action: 'wordbook_add', source: 'wordbook_page' });
+      setErrorMsg(getApiErrorMessage(error, '단어 추가에 실패했어요. 잠시 후 다시 시도해 주세요.'));
     } finally {
       setSubmitting(false);
     }
@@ -98,12 +101,15 @@ export default function WordBookPage() {
       setWords((prev) => prev.filter((item) => item.id !== deleteTargetId));
       setDeleteTargetId(null);
     } catch (error: unknown) {
-      setErrorMsg(getApiErrorMessage(error, '삭제 중 오류가 발생했습니다.'));
+      captureError(error, { action: 'wordbook_delete' });
+      setErrorMsg(getApiErrorMessage(error, '단어 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.'));
       setDeleteTargetId(null);
     }
   };
 
-  const isEmpty = useMemo(() => !loading && words.length === 0, [loading, words.length]);
+  const isEmpty = useMemo(() => !loading && !errorMsg && words.length === 0, [loading, errorMsg, words.length]);
+  const showBannerError = Boolean(errorMsg && words.length > 0);
+  const showInlineError = Boolean(errorMsg && words.length === 0);
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_#eef2ff_0%,_#f7f7f9_38%,_#f7f7f9_100%)] dark:bg-[radial-gradient(circle_at_top_right,_#1f2937_0%,_#0f172a_42%,_#020617_100%)]">
@@ -169,11 +175,11 @@ export default function WordBookPage() {
           </div>
         </section>
 
-        {errorMsg ? (
+        {showBannerError ? (
           <div className="mb-3">
             <InlineState
               type="error"
-              message={errorMsg}
+              message={errorMsg ?? ''}
               actionLabel="다시 시도"
               onAction={() => {
                 void fetchWords();
@@ -185,6 +191,15 @@ export default function WordBookPage() {
         <section className="flex-1 space-y-2 pb-4">
           {loading ? (
             <InlineState type="loading" message="단어장을 불러오는 중..." />
+          ) : showInlineError ? (
+            <InlineState
+              type="error"
+              message={errorMsg ?? ''}
+              actionLabel="다시 시도"
+              onAction={() => {
+                void fetchWords();
+              }}
+            />
           ) : isEmpty ? (
             <InlineState type="empty" message="저장된 단어가 없습니다. 첫 단어를 추가해보세요." />
           ) : (

@@ -129,6 +129,22 @@
 2. `VITE_GOOGLE_ANDROID_CLIENT_ID`는 현재 사용하는 Android OAuth client와 맞춰 둔다
 3. Play 첫 업로드 뒤에는 `App signing key certificate` SHA-1 기반 Android client도 추가한다
 4. Android release build가 성공해도 Play 배포판 로그인은 `app signing key` 미반영 상태면 실패할 수 있다
+5. Internal testing 배포마다 로그인/계정 탈퇴/오프라인 오류 케이스를 최소 1회 재검증한다
+
+## 6-1) Internal testing 배포 루틴(요약)
+
+1. `npm run mobile:check-env`
+2. `npm run android:release`
+3. Play Console `Internal testing`에 `app-release.aab` 업로드
+4. opt-in 설치 후 실기기에서 아래를 확인
+   - Google 로그인 성공
+   - 홈 복귀 및 게임 시작 가능
+   - 계정 탈퇴 성공/실패 메시지 노출
+   - 오프라인 시 오류 메시지와 재시도 동작
+5. 실패 시 우선 확인
+   - 로그인 실패(`code 10`): package name/SHA-1 불일치
+   - 로그인은 성공하나 앱 복귀 실패: redirect URI 미등록
+   - 탈퇴 실패 반복: 백엔드 설정 또는 네트워크 상태 점검
 
 ## 7) 참고 명령
 
