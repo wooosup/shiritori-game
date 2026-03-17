@@ -107,6 +107,10 @@ function App() {
           element={<LegalDocumentPage title="개인정보처리방침" type="privacy" />}
         />
         <Route
+          path="/legal/terms"
+          element={<LegalDocumentPage title="이용약관" type="terms" />}
+        />
+        <Route
           path="/legal/account-deletion"
           element={<LegalDocumentPage title="계정 삭제 안내" type="account-deletion" />}
         />

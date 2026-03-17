@@ -54,6 +54,7 @@ useop0821@gmail.com
 3. 백엔드 장애 시 빈 화면이 아닌 오류 메시지 노출
 4. 테스트 계정으로 실제 게임 플레이 가능(시작/입력/PASS/종료)
 5. 앱 내 `옵션 > 약관 및 정책`에서 아래 정보 확인
+   - 이용약관 진입 가능
    - 개인정보처리방침 진입 가능
    - 계정 삭제 안내 진입 가능
 6. 앱 내 `옵션 > 계정 탈퇴` 진입 가능 여부 확인
@@ -65,8 +66,9 @@ useop0821@gmail.com
 ## 4) 관련 제출 항목 링크
 
 1. Privacy policy URL: `https://shiritori-game-gold.vercel.app/legal/privacy-ko.html`
-2. Account deletion URL: `https://shiritori-game-gold.vercel.app/legal/account-deletion-ko.html`
-3. Data safety 기준표: `docs/play-store/data-safety-matrix.md`
+2. Terms of service URL: `https://shiritori-game-gold.vercel.app/legal/terms-ko.html`
+3. Account deletion URL: `https://shiritori-game-gold.vercel.app/legal/account-deletion-ko.html`
+4. Data safety 기준표: `docs/play-store/data-safety-matrix.md`
 
 ## 5) 심사 직전 빠른 실패 케이스 점검
 

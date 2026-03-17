@@ -436,10 +436,16 @@ export default function Home() {
   };
 
   const openLegalPage = useCallback(
-    (path: 'privacy' | 'account-deletion') => {
+    (path: 'privacy' | 'terms' | 'account-deletion') => {
       setOptionsError(null);
       setShowOptionsModal(false);
-      navigate(path === 'privacy' ? '/legal/privacy' : '/legal/account-deletion');
+      navigate(
+        path === 'privacy'
+          ? '/legal/privacy'
+          : path === 'terms'
+            ? '/legal/terms'
+            : '/legal/account-deletion',
+      );
     },
     [navigate],
   );
@@ -606,6 +612,16 @@ export default function Home() {
               <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-gray-500 dark:text-slate-400">약관 및 정책</p>
                 <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      openLegalPage('terms');
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-sm font-bold text-gray-700 active:scale-[0.99] dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <span>이용약관</span>
+                    <span className="text-xs font-semibold text-indigo-500">열기</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       openLegalPage('privacy');

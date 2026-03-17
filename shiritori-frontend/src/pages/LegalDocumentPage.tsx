@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface LegalDocumentPageProps {
   title: string;
-  type: 'privacy' | 'account-deletion';
+  type: 'privacy' | 'account-deletion' | 'terms';
 }
 
 function PrivacyContent() {
@@ -44,6 +44,41 @@ function AccountDeletionContent() {
         <p>인증 계정, 프로필, 게임 기록, 단어장, 세션 정보가 삭제됩니다.</p>
       </section>
       <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">앱을 사용할 수 없을 때</h2>
+        <p>
+          앱 실행이 어렵다면 <span className="font-bold text-gray-900 dark:text-slate-100">useop0821@gmail.com</span>으로
+          삭제 요청을 보낼 수 있습니다.
+        </p>
+        <p className="text-xs text-gray-500 dark:text-slate-400">
+          로그인에 사용한 Google 계정 이메일과 함께 `계정 삭제 요청`이라고 적어 보내주세요.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function TermsContent() {
+  return (
+    <div className="space-y-3 text-sm leading-relaxed text-gray-700 dark:text-slate-200">
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">서비스 안내</h2>
+        <p>
+          Shiritori는 일본어 끝말잇기 게임과 단어장, 복습 퀴즈를 제공하는 학습형 게임 서비스입니다.
+        </p>
+      </section>
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">이용 조건</h2>
+        <p>Google 로그인 후 서비스를 이용할 수 있으며, 닉네임과 플레이 기록은 서비스 운영에 사용됩니다.</p>
+      </section>
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">금지되는 이용</h2>
+        <p>비정상 요청, 자동화 남용, 타인 계정 도용, 서비스 운영을 방해하는 행위는 제한될 수 있습니다.</p>
+      </section>
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">서비스 변경 및 종료</h2>
+        <p>서비스 내용은 개선을 위해 바뀔 수 있으며, 중요한 변경은 앱 또는 운영 채널을 통해 안내합니다.</p>
+      </section>
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h2 className="mb-2 text-sm font-black text-gray-900 dark:text-slate-100">문의</h2>
         <p>useop0821@gmail.com</p>
       </section>
@@ -70,7 +105,9 @@ export default function LegalDocumentPage({ title, type }: Readonly<LegalDocumen
       </header>
 
       <main className="flex-1 overflow-y-auto p-4">
-        {type === 'privacy' ? <PrivacyContent /> : <AccountDeletionContent />}
+        {type === 'privacy' ? <PrivacyContent /> : null}
+        {type === 'account-deletion' ? <AccountDeletionContent /> : null}
+        {type === 'terms' ? <TermsContent /> : null}
       </main>
     </div>
   );

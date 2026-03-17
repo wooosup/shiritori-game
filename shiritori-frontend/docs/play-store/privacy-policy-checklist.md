@@ -27,8 +27,9 @@ Google Play 제출 전 개인정보처리방침 점검표입니다.
 ## 4) 이 프로젝트 기준 파일
 
 1. 정책 페이지: `public/legal/privacy-ko.html`
-2. 계정 삭제 안내: `public/legal/account-deletion-ko.html`
-3. Data safety 기준표: `docs/play-store/data-safety-matrix.md`
+2. 이용약관: `public/legal/terms-ko.html`
+3. 계정 삭제 안내: `public/legal/account-deletion-ko.html`
+4. Data safety 기준표: `docs/play-store/data-safety-matrix.md`
 
 ## 5) 배포 전 마지막 점검
 

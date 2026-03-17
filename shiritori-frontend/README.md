@@ -29,6 +29,7 @@ npm run build
 - `#/game` 게임 플레이
 - `#/wordbook` 단어장 페이지
 - `#/ranking` 랭킹 페이지
+- `#/legal/terms` 이용약관
 - `#/legal/privacy` 개인정보처리방침
 - `#/legal/account-deletion` 계정 삭제 안내
 

@@ -9,7 +9,8 @@
 3. Support email: `useop0821@gmail.com`
 4. Homepage URL: `https://shiritori-game-gold.vercel.app/`
 5. Privacy policy URL: `https://shiritori-game-gold.vercel.app/legal/privacy-ko.html`
-6. Account deletion URL: `https://shiritori-game-gold.vercel.app/legal/account-deletion-ko.html`
+6. Terms of service URL: `https://shiritori-game-gold.vercel.app/legal/terms-ko.html`
+7. Account deletion URL: `https://shiritori-game-gold.vercel.app/legal/account-deletion-ko.html`
 
 ## 2) 배포마다 확인할 값
 
@@ -40,7 +41,8 @@
 권장 입력값:
 1. Homepage URL: `https://shiritori-game-gold.vercel.app/`
 2. Privacy policy URL: `https://shiritori-game-gold.vercel.app/legal/privacy-ko.html`
-3. Support email: `useop0821@gmail.com`
+3. Terms of service URL: `https://shiritori-game-gold.vercel.app/legal/terms-ko.html`
+4. Support email: `useop0821@gmail.com`
 
 ### 3-2. Credentials > OAuth client IDs
 
