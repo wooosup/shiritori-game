@@ -122,8 +122,9 @@ export default function WordBookPage() {
         </div>
       </header>
 
-      <main className="flex w-full flex-1 flex-col overflow-y-auto px-4 pb-4 pt-4">
-        <section className="mb-3 rounded-2xl border border-indigo-100 bg-white p-3 shadow-sm dark:border-indigo-800 dark:bg-slate-900">
+      <main className="flex w-full flex-1 flex-col items-center overflow-y-auto px-4 pb-4 pt-4">
+        <div className="flex w-full max-w-md flex-1 flex-col">
+          <section className="mb-3 rounded-2xl border border-indigo-100 bg-white p-3 shadow-sm dark:border-indigo-800 dark:bg-slate-900">
           <div className="flex gap-2">
             <input
               type="text"
@@ -259,6 +260,7 @@ export default function WordBookPage() {
             ))
           )}
         </section>
+        </div>
       </main>
 
       <BottomTabBar

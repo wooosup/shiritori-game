@@ -106,8 +106,9 @@ export default function RankingPage() {
         </div>
       </header>
 
-      <main className="flex w-full flex-1 flex-col overflow-y-auto px-4 pb-4 pt-4">
-        {error ? (
+      <main className="flex w-full flex-1 flex-col items-center overflow-y-auto px-4 pb-4 pt-4">
+        <div className="w-full max-w-md">
+          {error ? (
           <div className="mb-3">
             <InlineState
               type="error"
@@ -204,6 +205,7 @@ export default function RankingPage() {
             </ul>
           )}
         </section>
+        </div>
       </main>
 
       <BottomTabBar
