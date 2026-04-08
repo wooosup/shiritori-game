@@ -47,6 +47,51 @@ body {
 .animate-ticker:hover {
     animation-play-state: paused;
 }
+
+@keyframes loaderProgress {
+    0%, 100% {
+        transform: scaleX(0.78);
+        transform-origin: left center;
+        opacity: 0.9;
+    }
+    50% {
+        transform: scaleX(1);
+        transform-origin: left center;
+        opacity: 1;
+    }
+}
+
+@keyframes loaderFloat {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        transform: translateY(-3px) scale(1.02);
+    }
+}
+
+@keyframes loaderPulse {
+    0%, 100% {
+        transform: scale(0.92);
+        opacity: 0.4;
+    }
+    50% {
+        transform: scale(1.08);
+        opacity: 0.72;
+    }
+}
+
+.animate-loader-progress {
+    animation: loaderProgress 1.9s ease-in-out infinite;
+}
+
+.animate-loader-float {
+    animation: loaderFloat 2.6s ease-in-out infinite;
+}
+
+.animate-loader-pulse {
+    animation: loaderPulse 2.8s ease-in-out infinite;
+}
 .pt-safe-top {
     padding-top: 12px;
     padding-top: max(12px, env(safe-area-inset-top));

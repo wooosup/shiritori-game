@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import LegalDocumentPage from './pages/LegalDocumentPage';
 import { handleAuthCallbackUrl, isNativeRuntime } from './platform/auth';
 import { installGlobalButtonClickSfx } from './sound/effects';
+import AppLoadingScreen from './components/AppLoadingScreen';
 
 const GamePage = lazy(() => import('./pages/GamePage'));
 const WordBookPage = lazy(() => import('./pages/WordBookPage'));
@@ -117,7 +118,7 @@ function App() {
         <Route
           path="/game"
           element={(
-            <Suspense fallback={null}>
+            <Suspense fallback={(<AppLoadingScreen />)}>
               <GamePage />
             </Suspense>
           )}
@@ -125,7 +126,7 @@ function App() {
         <Route
           path="/wordbook"
           element={(
-            <Suspense fallback={null}>
+            <Suspense fallback={(<AppLoadingScreen />)}>
               <WordBookPage />
             </Suspense>
           )}
@@ -133,7 +134,7 @@ function App() {
         <Route
           path="/ranking"
           element={(
-            <Suspense fallback={null}>
+            <Suspense fallback={(<AppLoadingScreen />)}>
               <RankingPage />
             </Suspense>
           )}

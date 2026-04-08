@@ -15,6 +15,7 @@ import SearchModal from '../components/SearchModal';
 import QuizModal, { type QuizModalPreset } from '../components/QuizModal';
 import BottomTabBar, { type BottomTabKey } from '../components/BottomTabBar';
 import InlineState from '../components/InlineState';
+import AppLoadingScreen from '../components/AppLoadingScreen';
 import { signInWithGoogle, signOutNativeGoogle } from '../platform/auth';
 import { getRuntimePlatform } from '../platform/runtime';
 import { type ThemePreference, useSettingsStore } from '../stores/settingsStore';
@@ -486,7 +487,7 @@ export default function Home() {
       : '닉네임 만들고 시작';
 
   if (loading || !authResolved) {
-    return <div className="flex h-[100dvh] items-center justify-center bg-[#F7F7F9] text-gray-700 dark:bg-slate-950 dark:text-slate-100">로딩 중...</div>;
+    return <AppLoadingScreen />;
   }
 
   if (!user) {
